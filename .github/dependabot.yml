@@ -1,0 +1,12 @@
+# Monthly, near-silent: the package's SwiftPM dependencies (generator, runtime, URLSession
+# transport, HTTP types, argument parser, Yams, DocC plugin) and the actions CI pins. A
+# generator bump regenerates the client on the next build, and CI runs `swift test` on the
+# PR, so a breaking bump fails there. The floor that discharges TD-1 (#5) arrives this way.
+version: 2
+updates:
+  - package-ecosystem: "swift"
+    directory: "/"
+    schedule: { interval: "monthly" }
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule: { interval: "monthly" }
