@@ -80,5 +80,15 @@ let package = Package(
             dependencies: [.product(name: "Yams", package: "Yams")],
             swiftSettings: upcoming
         ),
+        .testTarget(
+            name: "DevinKickKitTests",
+            dependencies: [
+                "DevinKickKit",
+                "DevinOpenAPI",
+                .product(name: "OpenAPIRuntime", package: "swift-openapi-runtime"),
+            ],
+            resources: [.copy("Fixtures")],
+            swiftSettings: upcoming
+        ),
     ]
 )
