@@ -57,14 +57,19 @@ extension DevinKick {
     public func sessionID(of argument: String) async throws(KickError) -> String {
         let run = await store.lookup(argument)
         guard let sessionID = run?.sessionID ?? (run == nil ? argument : nil) else {
-            throw .usage("Run \(argument) has no session: \(run?.failure ?? "its create's answer was lost, and no session carries its run tag yet").")
+            throw .usage("Run \(argument) has no session: \(run?.failure ?? "its create's answer was lost, and no session carries its run tag").")
         }
         return sessionID
     }
 
     /// Reads where `argument` (a session id, run id or run directory) stands.
     public func observe(_ argument: String) async -> Reading {
-        let run = await store.lookup(argument)
+        var run = await store.lookup(argument)
+        if let pending = run, pending.awaitsSession {
+            // Named directly, a run without a session checks its tag again: a session listed late
+            // (TD-7) still turns up, even after a sweep stopped looking.
+            run = (try? await reconcile(pending)) ?? pending
+        }
         guard let sessionID = run?.sessionID ?? (run == nil ? argument : nil) else {
             return Self.reading(argument, unstartedRun: run)
         }
@@ -82,10 +87,13 @@ extension DevinKick {
         return Reading(argument: argument, run: run, session: session, verdict: verdict, outcome: .settled(settlement))
     }
 
-    /// A run with no session: refused at create (failed), or an orphan not yet found (unknown).
+    /// A run with no session: refused at create (failed, as the server said), or one whose
+    /// session hasn't been found under its run tag (unknown: only the server can say "failed").
     static func reading(_ argument: String, unstartedRun run: RunState?) -> Reading {
         let settlement: Settlement = if let failure = run?.failure {
             .failed(status: "not created", detail: failure)
+        } else if run?.unfoundAt != nil {
+            .unknown(status: "requested", detail: "no session found under its run tag")
         } else {
             .unknown(status: "requested", detail: "no session found under its run tag yet")
         }
@@ -158,17 +166,17 @@ extension DevinKick {
         return run
     }
 
-    /// Looks for the session of an orphan run (requested, no answer recorded) by its run tag,
-    /// and records it if found. An orphan older than the settle window that still has none was
-    /// never created: that is recorded as its failure, so it isn't listed again.
+    /// Looks for the session of a run without one (requested, no answer recorded) by its run
+    /// tag, and records it if found. An orphan still without one past the settle window is
+    /// recorded as `unfound`, so a sweep stops listing it; it is not called failed, which an
+    /// empty listing can't prove (TD-7).
     func reconcile(_ run: RunState, now: Date = Date()) async throws(KickError) -> RunState {
-        guard run.isOrphan else { return run }
+        guard run.awaitsSession else { return run }
         let found = try await sessions(tagged: run.runTag)
         if !found.isEmpty { return try await recordCreated(run, sessions: found) }
         let settle = TimeInterval(timing.createSettle.components.seconds)
-        guard let requestedAt = run.requestedAt, now.timeIntervalSince(requestedAt) > settle else { return run }
-        var event = IndexEvent(.failed, run: run)
-        event.message = "no session carries its run tag \(run.runTag)"
+        guard run.isOrphan, let requestedAt = run.requestedAt, now.timeIntervalSince(requestedAt) > settle else { return run }
+        let event = IndexEvent(.unfound, run: run)
         try await store.append(event)
         var concluded = run
         concluded.apply(event)

@@ -220,8 +220,10 @@ the run id (`yyyyMMdd-HHmmss-xxxx`, re-minted if the index holds it, since four 
 within a second at batch sizes), write `request.json`, append `requested`, POST, write
 `session.json`, append `created`. Every session carries the tags `kick` and `kick-run-<id>`.
 - A run with `requested` and no `created` is an orphan, found again by its run tag at lookup
-  (`status`, `list`) and before a create is retried. An orphan still unlisted past the settle
-  window is concluded as never created, so it isn't listed forever.
+  (`status`, `list`) and before a create is retried. One still unlisted past the settle window is
+  recorded as `unfound`: it reads unknown, not failed, because an empty listing can't prove the
+  create failed (TD-7) and only the server can say so. A sweep of the store stops listing it; a
+  direct lookup of the run still checks its tag, so a session listed late turns up.
 - After a transport error, a 5xx or an unreadable 2xx, kick lists by run tag, again 15 s later if
   that is empty, and creates again only if both are empty; if it can't list, it creates nothing
   more. The residual race is TD-7.
@@ -241,7 +243,7 @@ within a second at batch sizes), write `request.json`, append `requested`, POST,
 `KICK_STORE` (default `~/Library/Application Support/devin-kick`) holds a directory per run,
 `runs/<date>-<slug>-<run id>/` with `request.json`, `session.json`, `result.json`,
 `messages.json` and `attachments/`, and an append-only `index.jsonl` of events: `requested`,
-`created`, `replied`, `settled`, `failed`, `archived`, `unarchived`. Every event carries the whole
+`created`, `replied`, `settled`, `failed`, `unfound`, `archived`, `unarchived`. Every event carries the whole
 record (run id, session id, mode, title, every tag, directory, `resumable`), so `list --tag` works
 from the index alone; it is read once into a map by run id and session id (``RunState``). `--out`
 places run directories elsewhere; the index stays central and records absolute paths.

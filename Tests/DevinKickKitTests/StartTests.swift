@@ -190,10 +190,14 @@ struct StartTests {
         #expect(run.sessionID == "00000000000000000000000000000001")
     }
 
-    @Test func anOrphanIsReconciledAtLookupOrConcludedAfterTheSettle() async throws {
+    /// An empty listing past the settle window can't prove a create failed (TD-7): the run is
+    /// recorded as unfound, reads unknown, drops out of the sweep, and a direct lookup still
+    /// finds a session listed late.
+    @Test func anOrphanIsReconciledAtLookupOrMarkedUnfoundAfterTheSettle() async throws {
         let sandbox = try Sandbox()
         defer { sandbox.remove() }
-        let kick = try sandbox.kick(ScriptedTransport(["get_sessions": [Self.echoing(), .json(Fixture.page([]))]]))
+        let transport = ScriptedTransport(["get_sessions": [Self.echoing(), .json(Fixture.page([]))]])
+        let kick = try sandbox.kick(transport)
         let store = kick.store
         for runID in ["20261018-120000-0001", "20261018-120000-0002"] {
             let run = RunState(runID: runID, directory: sandbox.base, mode: nil, title: nil, tags: [RunStore.runTag(runID)], resumable: true)
@@ -202,8 +206,20 @@ struct StartTests {
         await kick.reconcileOrphans()
         let runs = await store.runs(tagged: nil)
         #expect(runs.filter { $0.sessionID != nil }.count == 1)
-        #expect(runs.filter { $0.failure?.contains("no session carries its run tag") == true }.count == 1)
-        #expect(runs.allSatisfy { !$0.isOrphan })
+        let unfound = try #require(runs.first { $0.unfoundAt != nil })
+        #expect(unfound.failure == nil)
+        #expect(!unfound.isOrphan && unfound.awaitsSession)
+        #expect(DevinKick.reading(unfound.runID, unstartedRun: unfound).outcome.label == "unknown")
+
+        let listings = await transport.count("get_sessions")
+        await kick.reconcileOrphans()
+        #expect(await transport.count("get_sessions") == listings, "a sweep skips an unfound run")
+
+        await transport.script("get_sessions", [Self.echoing(id: "00000000000000000000000000000005")])
+        await transport.script("get_session", [.json(Fixture.session(id: "00000000000000000000000000000005"))])
+        let late = await kick.observe(unfound.runID)
+        #expect(late.session?.id == "00000000000000000000000000000005")
+        #expect(await store.lookup(unfound.runID)?.sessionID == "00000000000000000000000000000005")
     }
 
     // MARK: - Modes

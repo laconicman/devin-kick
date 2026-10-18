@@ -71,7 +71,8 @@ struct StatusTests {
     }
 
     @Test func runsWithoutASessionReadAsUnknownOrFailed() async throws {
-        let kick = try Self.kick(ScriptedTransport([:]))
+        // A direct lookup of an orphan checks its run tag first; here nothing carries it.
+        let kick = try Self.kick(ScriptedTransport(["get_sessions": [.json(Fixture.page([]))]]))
         let orphan = RunState(runID: "20261018-120000-0001", directory: temporaryDirectory(), mode: nil, title: nil, tags: [], resumable: true)
         try await kick.store.append(IndexEvent(.requested, run: orphan))
         var refused = IndexEvent(.failed, run: RunState(runID: "20261018-120000-0002", directory: temporaryDirectory(), mode: nil, title: nil, tags: [], resumable: true))

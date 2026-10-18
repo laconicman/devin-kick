@@ -17,6 +17,9 @@ struct IndexEvent: Codable, Sendable, Equatable {
         case settled
         /// The create was refused, so no session exists for the run.
         case failed
+        /// Past the settle window, no session carried the run tag. Not a failure, which only the
+        /// server can report: the session may still appear (TD-7), and a direct lookup checks.
+        case unfound
         case archived
         case unarchived
     }
@@ -93,6 +96,8 @@ public struct RunState: Sendable, Hashable {
     public var lastSettlement: String?
     /// Why the create was refused, when it was.
     public var failure: String?
+    /// When a lookup past the settle window last found no session under the run tag.
+    public var unfoundAt: Date?
 
     public init(runID: String, directory: URL, mode: String?, title: String?, tags: [String], resumable: Bool?, at date: Date = Date()) {
         self.runID = runID
@@ -105,8 +110,12 @@ public struct RunState: Sendable, Hashable {
     }
 
     /// A run that was requested but has no session and no refusal: its create's answer was
-    /// lost, so the session may exist. Reconciled by run tag at lookup.
-    public var isOrphan: Bool { requestedAt != nil && sessionID == nil && failure == nil }
+    /// lost, so the session may exist. Every lookup reconciles it by run tag.
+    public var isOrphan: Bool { awaitsSession && unfoundAt == nil }
+
+    /// An orphan, or one a lookup past the settle window found no session for: a direct lookup
+    /// of the run still checks its tag, a sweep of the store no longer does.
+    public var awaitsSession: Bool { requestedAt != nil && sessionID == nil && failure == nil }
 
     /// The run's own tag, `kick-run-<id>`, sent with the session at create.
     public var runTag: String { RunStore.runTag(runID) }
@@ -140,6 +149,8 @@ public struct RunState: Sendable, Hashable {
             lastSettlement = event.settlement
         case .failed:
             failure = [event.errorCode, event.message].compactMap(\.self).joined(separator: ": ")
+        case .unfound:
+            unfoundAt = event.timestamp
         case .archived:
             archived = true
         case .unarchived:

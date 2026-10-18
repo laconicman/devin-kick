@@ -154,6 +154,7 @@ extension RunState {
             runID, sessionID ?? "-", lastSettlement ?? "-", Reading.oneLine(title ?? "-"), directory.path,
         ]
         if isOrphan { fields.append("[requested: no session found yet]") }
+        if unfoundAt != nil, awaitsSession { fields.append("[requested: no session found under its run tag]") }
         if let failure { fields.append("[not created: \(Reading.oneLine(failure))]") }
         if !duplicates.isEmpty { fields.append("[also under its run tag: \(duplicates.joined(separator: ", "))]") }
         if archived { fields.append("[archived]") }
