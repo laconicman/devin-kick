@@ -17,7 +17,7 @@ struct KickCommand: AsyncParsableCommand {
         \(ExitStatus.help)
         """,
         version: DevinKick.version,
-        subcommands: [WhoAmI.self, UploadCommand.self]
+        subcommands: [WhoAmI.self, UploadCommand.self, StartCommand.self]
     )
 }
 
@@ -45,12 +45,17 @@ extension DevinKick {
     }
 }
 
+/// Writes `kick: <message>` to stderr.
+func printError(_ message: String) {
+    FileHandle.standardError.write(Data("kick: \(message)\n".utf8))
+}
+
 /// Runs `body`, printing a ``KickError`` to stderr and exiting with its documented status.
 func reportingKickErrors(_ body: () async throws(KickError) -> Void) async throws {
     do {
         try await body()
     } catch {
-        FileHandle.standardError.write(Data("kick: \(error.localizedDescription)\n".utf8))
+        printError(error.localizedDescription)
         throw ExitCode(error.exitCode)
     }
 }

@@ -18,6 +18,10 @@ public struct DevinKick: Sendable {
     public let store: RunStore
     /// The upload cache beside it.
     let uploads: UploadCache
+    /// `available_devin_modes`, read once.
+    let modes = ModeCatalog()
+    /// Where the Kit reports what doesn't fail a call.
+    let warn: RunStore.Warn
 
     /// `warn` receives what the Kit reports without failing: a derived file it couldn't write,
     /// a mode the organization may not offer.
@@ -36,6 +40,7 @@ public struct DevinKick: Sendable {
     ) {
         self.configuration = configuration
         self.timing = timing
+        self.warn = warn
         self.store = RunStore(root: configuration.storeURL, warn: warn)
         self.uploads = UploadCache(url: configuration.storeURL.appending(path: "uploads.jsonl"), warn: warn)
         self.client = Client(
@@ -91,6 +96,9 @@ public struct DevinKick: Sendable {
 /// The delays the Kit waits, in one value so tests can make them instant.
 struct Timing: Sendable {
     var retry = RetryPolicy()
+    /// How long a create whose answer was lost is given to appear in the listing by its run tag
+    /// before an empty listing counts (Design: "Never lost; duplicates found, not prevented").
+    var createSettle: Duration = .seconds(15)
     var sleep: @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
 
     static let standard = Timing()

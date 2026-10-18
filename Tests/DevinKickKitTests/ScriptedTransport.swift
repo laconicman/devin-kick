@@ -10,9 +10,13 @@ import Testing
 /// `MockTransport`; routed by the generated operation id.
 actor ScriptedTransport: ClientTransport {
     /// One scripted answer: a response, or an error the transport throws.
-    enum Reply: Sendable {
+    indirect enum Reply: Sendable {
         case response(status: Int, headers: [String: String] = [:], body: String = "{}")
         case failure(URLError.Code)
+        /// Built from the request, such as a listing that echoes the tag it was asked for.
+        case dynamic(@Sendable (Sent) -> Reply)
+        /// Answered after a delay, so the caller can be cancelled meanwhile.
+        case delayed(Duration, Reply)
 
         static func json(_ body: String) -> Reply { .response(status: 200, body: body) }
     }
@@ -44,6 +48,19 @@ actor ScriptedTransport: ClientTransport {
         sent.filter { $0.operationID == operationID }.compactMap(\.body)
     }
 
+    /// Follows `.dynamic` and `.delayed` down to a response or a failure.
+    private func resolve(_ reply: Reply, _ sent: Sent) async throws -> Reply {
+        switch reply {
+        case .dynamic(let make):
+            return try await resolve(make(sent), sent)
+        case .delayed(let delay, let next):
+            try await Task.sleep(for: delay)
+            return try await resolve(next, sent)
+        case .response, .failure:
+            return reply
+        }
+    }
+
     func send(
         _ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String
     ) async throws -> (HTTPResponse, HTTPBody?) {
@@ -54,9 +71,11 @@ actor ScriptedTransport: ClientTransport {
             Issue.record("unscripted operation: \(operationID)")
             return (HTTPResponse(status: .notFound), nil)
         }
-        let reply = replies.count > 1 ? replies.removeFirst() : replies[0]
+        let scripted = replies.count > 1 ? replies.removeFirst() : replies[0]
         scripts[operationID] = replies
-        switch reply {
+        switch try await resolve(scripted, Sent(request: request, body: data, operationID: operationID)) {
+        case .dynamic, .delayed:
+            preconditionFailure("resolve(_:_:) returns only a response or a failure")
         case .failure(let code):
             throw URLError(code)
         case .response(let status, let headers, let body):
@@ -122,6 +141,24 @@ enum Fixture {
         let outputField = output.map { #","structured_output":\#($0)"# } ?? ""
         let modeField = mode.map { #","devin_mode":"\#($0)""# } ?? ""
         return #"{"session_id":"\#(id)","url":"https://app.devin.ai/sessions/\#(id)","status":"\#(status)","title":"[test] \#(id)","tags":[\#(tagList)],"org_id":"org-test","created_at":\#(createdAt),"updated_at":\#(updatedAt),"acus_consumed":0.0,"pull_requests":[]\#(detailField)\#(outputField)\#(modeField)}"#
+    }
+
+    /// A listing page of `sessions` (JSON bodies).
+    static func page(_ sessions: [String], next: String? = nil) -> String {
+        let cursor = next.map { #","has_next_page":true,"end_cursor":"\#($0)""# } ?? #","has_next_page":false"#
+        return #"{"items":[\#(sessions.joined(separator: ","))]\#(cursor)}"#
+    }
+
+    /// `GET …/automations/schemas`, optionally with `available_devin_modes`.
+    static func schemas(modes: [String]?) -> String {
+        let list = modes.map { #","available_devin_modes":[\#($0.map { "\"\($0)\"" }.joined(separator: ","))]"# } ?? ""
+        return #"{"update_semantics":"replace","sources":{}\#(list)}"#
+    }
+
+    /// The `tags` a listing asked for, from its form-exploded `qs` query.
+    static func queriedTags(_ sent: ScriptedTransport.Sent) -> [String] {
+        let query = URLComponents(string: sent.request.path ?? "")?.queryItems ?? []
+        return query.filter { $0.name == "tags" }.compactMap(\.value)
     }
 
     static func problem(status: Int, code: String? = nil, detail: String) -> String {

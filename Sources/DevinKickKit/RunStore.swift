@@ -41,8 +41,8 @@ public actor RunStore {
         self.warn = warn
     }
 
-    var indexURL: URL { root.appending(path: "index.jsonl") }
-    var runsURL: URL { root.appending(path: "runs", directoryHint: .isDirectory) }
+    nonisolated var indexURL: URL { root.appending(path: "index.jsonl") }
+    nonisolated var runsURL: URL { root.appending(path: "runs", directoryHint: .isDirectory) }
 
     static let directoryPermissions: FilePermissions = .ownerReadWriteExecute
     static let filePermissions: FilePermissions = .ownerReadWrite
@@ -50,6 +50,12 @@ public actor RunStore {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
         encoder.dateEncodingStrategy = .iso8601
+        return encoder
+    }()
+    /// For the files people read: `request.json`, `session.json`, `result.json`.
+    static let prettyEncoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
         return encoder
     }()
     static let decoder: JSONDecoder = {
