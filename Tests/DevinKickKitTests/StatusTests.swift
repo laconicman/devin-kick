@@ -160,13 +160,3 @@ struct StatusTests {
         #expect((1...6).map(policy.interval(before:)) == [.seconds(15), .seconds(22.5), .seconds(33.75), .seconds(50.625), .seconds(60), .seconds(60)])
     }
 }
-
-extension Reading.Outcome {
-    /// The settlement's label, or `error`.
-    var label: String {
-        switch self {
-        case .settled(let settlement): settlement.label
-        case .unreadable: "error"
-        }
-    }
-}

@@ -21,7 +21,11 @@ struct SaveCommand: AsyncParsableCommand {
     }
 
     func run() async throws {
-        try await eachSession(ids) { (kick, id) async throws(KickError) in try await kick.save(id).line }
+        try await eachSession(ids) { (kick, id) async throws(KickError) in
+            let saved = try await kick.save(id)
+            TSVLog.append(saved)
+            return saved.line
+        }
     }
 }
 

@@ -20,7 +20,7 @@ struct KickCommand: AsyncParsableCommand {
         subcommands: [
             WhoAmI.self, UploadCommand.self, StartCommand.self, StatusCommand.self, WaitCommand.self,
             MessagesCommand.self, SaveCommand.self, ReplyCommand.self, ArchiveCommand.self, UnarchiveCommand.self,
-            ListCommand.self,
+            ListCommand.self, RunCommand.self,
         ]
     )
 }

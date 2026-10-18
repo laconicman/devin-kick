@@ -39,10 +39,21 @@ extension DevinKick {
         guard timeout > .zero, timeout <= Self.maximumWait else {
             throw .usage("A wait lasts between 1 and \(Self.maximumWait.components.seconds) seconds; call it again to wait longer.")
         }
-        let deadline = timing.now() + timeout
+        return await poll(arguments, until: condition, budget: timeout)
+    }
+
+    /// ``wait(_:until:timeout:)`` without its cap, for `run`, which a shell may let block for
+    /// hours. `progress` hears each reading whose label changed.
+    func poll(
+        _ arguments: [String], until condition: WaitCondition, budget: Duration,
+        progress: (@Sendable (Reading) -> Void)? = nil
+    ) async -> [Reading] {
+        let deadline = timing.now() + budget
         var readings: [Reading] = []
         for argument in arguments {
-            readings.append(await observe(argument, within: deadline - timing.now()))
+            let reading = await observe(argument, within: deadline - timing.now())
+            progress?(reading)
+            readings.append(reading)
         }
         var poll = 1
         while !Self.satisfied(condition, readings) {
@@ -53,7 +64,9 @@ extension DevinKick {
             for index in readings.indices where !readings[index].isSettled {
                 let budget = deadline - timing.now()
                 guard budget > .zero else { break }
-                readings[index] = await observe(arguments[index], within: budget)
+                let reading = await observe(arguments[index], within: budget)
+                if reading.outcome.label != readings[index].outcome.label { progress?(reading) }
+                readings[index] = reading
             }
         }
         return readings

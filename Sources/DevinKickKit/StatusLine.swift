@@ -16,6 +16,22 @@ public struct Reading: Sendable, Equatable {
         case settled(Settlement)
         /// The status couldn't be read.
         case unreadable(KickError)
+
+        /// The settlement's label, or `error`.
+        public var label: String {
+            switch self {
+            case .settled(let settlement): settlement.label
+            case .unreadable: "error"
+            }
+        }
+    }
+
+    public init(argument: String, run: RunState?, session: SessionSnapshot?, verdict: OutputVerdict?, outcome: Outcome) {
+        self.argument = argument
+        self.run = run
+        self.session = session
+        self.verdict = verdict
+        self.outcome = outcome
     }
 
     /// Whether `wait` stops waiting for this one: anything but working, or an error a retry
