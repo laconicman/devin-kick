@@ -1,0 +1,21 @@
+# Groups generated release notes (`gh release create <tag> --generate-notes`) by PR label.
+# The labels follow the owner's other packages (SimKDSKit), plus this repo's house concerns:
+# the TD-n register and the Upstream/ drafts. docs/GitHubWorkflow.md has the habits.
+changelog:
+  categories:
+    - title: Breaking changes (minor bump while 0.x)
+      labels: ["breaking"]
+    - title: Features
+      labels: ["enhancement"]
+    - title: Fixes
+      labels: ["bug"]
+    - title: Upstream — owed to the generator or to Cognition
+      labels: ["upstream"]
+    - title: Tech debt registered or discharged
+      labels: ["tech-debt"]
+    - title: Docs and hygiene
+      labels: ["documentation", "hygiene"]
+    - title: Tests and tooling
+      labels: ["tests"]
+    - title: Other
+      labels: ["*"]
