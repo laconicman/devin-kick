@@ -19,18 +19,29 @@ The client is generated at build time from Devin's **official** OpenAPI 3.1 docu
 generated is committed. The document is FastAPI's output and does not generate as published, so
 `swift run devin-spec-tool` normalizes it with three idempotent transforms:
 
-1. `anyOf: [X, {type: null}]` → `X`, and the field leaves `required`. As published, the generator
-   skips every path parameter and the client doesn't compile (<doc:TechDebt> TD-2, TD-3).
+1. `anyOf: [X, {type: null}]` → `X` with `type: [T, "null"]`, 3.1's own spelling of nullable,
+   which the generator reads as `T?`. `required` stays as the spec says. A nullable `$ref` has no
+   such spelling, so only those (6 fields) become the bare `$ref` and leave `required`. As
+   published, the generator skips every path parameter and the client doesn't compile
+   (<doc:TechDebt> TD-2, TD-3).
 2. `enum` is dropped from every schema reachable from a response, so a status, detail or mode
-   Devin adds later can't fail decoding. Request-side enums stay.
+   Devin adds later can't fail decoding. The generator's string enums are closed, with no catch-all
+   case. Request-side enums stay.
 3. `handle_create_session_v3_…_post` → `create_session`, so the façade reads `createSession`.
 
 The tool stamps the source URL, the raw document's sha256 and the date under `info.x-devin-kick`.
+A field made optional encodes with `encodeIfPresent`, so it is omitted, never sent as `null`.
 
 *Rejected:*
 - **A handwritten client:** no pinned contract, so drift hides.
 - **The raw document plus `typeOverrides`:** 733 nullable `anyOf`s are too many to override one by
   one.
+- **Making every nullable field non-required:** the generated Swift is the same `T?` (verified),
+  but it misstates the contract for any other reader. The first cut did this; a DeepWiki review
+  before the first PR showed the better spelling.
+- **The generator's "open enum" pattern** (`anyOf: [{enum}, {type: string}]`): it keeps
+  known-case checking, but turns every such field into a `value1`/`value2` wrapper, and
+  ``Settlement`` owns that vocabulary anyway.
 - **A Python normalizer:** a second toolchain in a Swift repository.
 
 ### One binary, two faces, three layers

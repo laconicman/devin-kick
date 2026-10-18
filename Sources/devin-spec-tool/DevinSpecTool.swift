@@ -11,8 +11,9 @@ import Yams
 ///   swift run devin-spec-tool --no-fetch              # re-normalize the vendored spec in place
 ///
 /// Transforms (the why is in the DocC Design and TechDebt articles):
-///  1. Nullables — FastAPI's `anyOf: [X, {type: null}]` becomes `X`, and the property leaves its
-///     parent's `required`, so Swift makes it `Optional` and a JSON `null` decodes to `nil`.
+///  1. Nullables — FastAPI's `anyOf: [X, {type: null}]` becomes `X` with `type: [T, "null"]`,
+///     3.1's own nullable spelling, which the generator reads as `T?`; `required` stays. A nullable
+///     `$ref` has no such spelling, so it becomes the bare `$ref` and leaves `required` instead.
 ///     Without this the generator skips every path parameter and emits code that doesn't compile.
 ///  2. Response enums — `enum` is dropped from every schema reachable from a response, so a
 ///     status, detail or mode Devin adds later can never fail decoding. Request-side enums stay.
@@ -114,7 +115,9 @@ struct DevinSpecTool {
                         if let collapsed = collapsedNullable(child) {
                             child = collapsed
                             stats.nullables += 1
-                            if let name = name.string { optionalized.insert(name) }
+                            // Only a nullable `$ref` (or an untyped schema) lost its `null`;
+                            // a typed one says `type: [T, "null"]` and stays required.
+                            if !isTypedNullable(collapsed), let name = name.string { optionalized.insert(name) }
                         }
                         properties[name] = child
                     }
@@ -137,9 +140,16 @@ struct DevinSpecTool {
         }
     }
 
-    /// `X` for a schema of the form `anyOf: [X, {type: null}]` (either order), else `nil`.
-    /// Sibling keys (`title`, `description`, `default`, …) carry over onto `X`; onto a `$ref`
-    /// only `description` does, since the generator ignores `$ref` siblings anyway.
+    /// The rewrite of a schema of the form `anyOf: [X, {type: null}]` (either order), else `nil`.
+    ///
+    /// - If `X` has a single `type: T`, the result is `X` with `type: [T, "null"]`: OpenAPI 3.1's own
+    ///   spelling of nullable, which the generator reads as `T?`. `required` can then stay as the
+    ///   spec says (DeepWiki review of swift-openapi-generator, 2026-10-18).
+    /// - Otherwise (a `$ref`, or an untyped schema) 3.1 has no other spelling, so the result is `X`
+    ///   alone and the caller makes the field non-required. Onto a `$ref` only `description` carries
+    ///   over, since the generator ignores `$ref` siblings.
+    ///
+    /// Sibling keys (`title`, `description`, `default`, …) carry over onto a non-`$ref` `X`.
     static func collapsedNullable(_ node: Node) -> Node? {
         guard case .mapping(let map) = node,
               case .sequence(let anyOf)? = map["anyOf"], anyOf.count == 2,
@@ -155,7 +165,16 @@ struct DevinSpecTool {
                 merged[key] = value
             }
         }
+        if !isRef, let type = merged["type"]?.string, type != "null" {
+            merged["type"] = [Node(type), Node("null")]
+        }
         return .mapping(merged)
+    }
+
+    /// Whether `node` declares its nullability itself (`type: [T, "null"]`).
+    static func isTypedNullable(_ node: Node) -> Bool {
+        guard case .sequence(let types)? = node["type"] else { return false }
+        return types.contains { $0.string == "null" }
     }
 
     static func isNullSchema(_ node: Node) -> Bool {

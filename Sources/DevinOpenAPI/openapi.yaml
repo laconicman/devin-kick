@@ -6,13 +6,17 @@ components:
           title: Cycle Acu Limit
           type: integer
         org_id:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
         scope:
           title: Scope
           type: string
         user_id:
-          type: string
+          type:
+          - string
+          - null
           title: User Id
       required:
       - cycle_acu_limit
@@ -52,7 +56,9 @@ components:
           title: Id
           type: string
         name:
-          type: string
+          type:
+          - string
+          - null
           description: Display name, resolved server-side; null when deleted.
           title: Name
         type:
@@ -79,7 +85,9 @@ components:
         breakdown is not available.'
       properties:
         automation:
-          type: number
+          type:
+          - number
+          - null
           title: Automation
         cascade:
           title: Cascade
@@ -88,7 +96,9 @@ components:
           title: Devin
           type: number
         review:
-          type: number
+          type:
+          - number
+          - null
           title: Review
         terminal:
           title: Terminal
@@ -105,17 +115,23 @@ components:
     AiGatewayMetricPointResponse:
       properties:
         bucket_duration_seconds:
-          type: integer
+          type:
+          - integer
+          - null
           description: Actual complete bucket duration; null for boundary/in-progress
             or unknown-width buckets.
           title: Bucket Duration Seconds
         per_minute:
-          type: number
+          type:
+          - number
+          - null
           description: "Counter per_second × 60 (including aggregate TPM); otherwise
             null."
           title: Per Minute
         per_second:
-          type: number
+          type:
+          - number
+          - null
           description: Counter value / complete bucket duration (QPS or aggregate
             token/s); otherwise null.
           title: Per Second
@@ -124,11 +140,17 @@ components:
           title: Timestamp
           type: integer
         value:
-          type: number
+          type:
+          - number
+          - null
           description: Bucket value; null means no observation.
           title: Value
       required:
       - timestamp
+      - value
+      - bucket_duration_seconds
+      - per_second
+      - per_minute
       title: AiGatewayMetricPointResponse
       type: object
     AiGatewayMetricProvenanceResponse:
@@ -186,7 +208,9 @@ components:
           title: Aggregation
           type: string
         effective_interval_seconds:
-          type: integer
+          type:
+          - integer
+          - null
           description: Observed timestamp spacing; null if fewer than two timestamps.
           title: Effective Interval Seconds
         metric:
@@ -226,6 +250,7 @@ components:
       - time_after
       - time_before
       - requested_interval_seconds
+      - effective_interval_seconds
       - provenance
       - series
       title: AiGatewayMetricsResponse
@@ -244,21 +269,30 @@ components:
           title: Created At
           type: integer
         expires_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Expires At
         is_active:
           title: Is Active
           type: boolean
         last_used_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Last Used At
         revoked_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Revoked At
       required:
       - api_key_id
       - api_key_name
       - created_at
+      - expires_at
+      - revoked_at
+      - last_used_at
       - is_active
       title: ApiKeyResponse
       type: object
@@ -318,24 +352,39 @@ components:
           title: Data
           type: object
         org_id:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
         service_user_id:
-          type: string
+          type:
+          - string
+          - null
           title: Service User Id
         service_user_name:
-          type: string
+          type:
+          - string
+          - null
           title: Service User Name
         user_email:
-          type: string
+          type:
+          - string
+          - null
           title: User Email
         user_id:
-          type: string
+          type:
+          - string
+          - null
           title: User Id
       required:
       - audit_log_id
       - action
       - created_at
+      - org_id
+      - user_id
+      - user_email
+      - service_user_id
+      - service_user_name
       - data
       title: AuditLogResponse
       type: object
@@ -346,7 +395,9 @@ components:
           enum:
           - normal
           - deep
-          type: string
+          type:
+          - string
+          - null
           description: 'Effort to apply to future incremental runs of the scan, including
             the scheduled ones: ''normal'' or ''deep''. Omit to keep the scan''s current
             effort. Rejected with 409 while a scan run is active.'
@@ -398,7 +449,9 @@ components:
       properties:
         max_findings_per_scan:
           minimum: 1.0
-          type: integer
+          type:
+          - integer
+          - null
           description: Most findings remediated per scan; defaults to 50.
           title: Max Findings Per Scan
         severities:
@@ -419,7 +472,9 @@ components:
       additionalProperties: false
       properties:
         host:
-          type: string
+          type:
+          - string
+          - null
           title: Host
         repo_name:
           description: Repository (owner/name).
@@ -456,7 +511,9 @@ components:
       properties:
         max_concurrent_runs:
           minimum: 1.0
-          type: integer
+          type:
+          - integer
+          - null
           description: Maximum in-flight runs for this automation; further triggered
             events wait in its queue. A run stops counting toward the limit once its
             session finishes and is awaiting further instructions, not only when the
@@ -464,7 +521,9 @@ components:
           title: Max Concurrent Runs
         max_queue_depth:
           minimum: 0.0
-          type: integer
+          type:
+          - integer
+          - null
           description: Maximum triggered events waiting in the automation's queue
             to run; events beyond this are dropped. Requires max_concurrent_runs to
             be set. null = unlimited.
@@ -631,7 +690,9 @@ components:
           title: Teams Reply Access
           type: string
         template_id:
-          type: string
+          type:
+          - string
+          - null
           description: Create-only provenance marker; resolve ids via the templates
             endpoint. When set and tools.mcp_servers is omitted, the template's required_mcps
             apply.
@@ -658,7 +719,9 @@ components:
         recipients:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: null = the automation creator; required for service-user-created
             automations.
           title: Recipients
@@ -813,7 +876,9 @@ components:
         max_acu_limit:
           maximum: 1000.0
           minimum: 1.0
-          type: integer
+          type:
+          - integer
+          - null
           description: Per spawned session (same name as the sessions API).
           title: Max Acu Limit
       title: AutomationLimits
@@ -846,7 +911,9 @@ components:
         replaced; ``enabled`` alone may be omitted to keep its state.'
       properties:
         enabled:
-          type: boolean
+          type:
+          - boolean
+          - null
           description: Whether the check gates the automation's runs. Omitted keeps
             the current state; a new configuration starts enabled.
           title: Enabled
@@ -894,7 +961,9 @@ components:
           title: Prompt
           type: string
         target_devin_id:
-          type: string
+          type:
+          - string
+          - null
           description: Must belong to the org; editing an automation containing this
             action requires write access to the target session (enable/disable-only
             edits exempt). Required unless auto_create is true, in which case it is
@@ -920,13 +989,17 @@ components:
           title: Auto Create
           type: boolean
         prompt:
-          type: string
+          type:
+          - string
+          - null
           description: The triggering event's payload is appended automatically. Required
             when creating or adding this action; on a merge-semantics update, omit
             it to keep the stored value (null is invalid).
           title: Prompt
         target_devin_id:
-          type: string
+          type:
+          - string
+          - null
           description: Must belong to the org; editing an automation containing this
             action requires write access to the target session (enable/disable-only
             edits exempt). Required unless auto_create is true, in which case it is
@@ -965,7 +1038,9 @@ components:
       additionalProperties: false
       properties:
         setup_prompt:
-          type: string
+          type:
+          - string
+          - null
           description: Injected into the session's system prompt. Same reference-token
             grammar as prompt. Required when creating or adding this action; on a
             merge-semantics update, omit it to keep the stored value (null is invalid).
@@ -1034,7 +1109,9 @@ components:
         group is replaced; ``enabled`` alone may be omitted to keep its state.'
       properties:
         enabled:
-          type: boolean
+          type:
+          - boolean
+          - null
           description: Whether the script gates the automation's runs. Omitted keeps
             the current state; a new configuration starts enabled.
           title: Enabled
@@ -1105,10 +1182,14 @@ components:
       description: Run an Agent Readiness assessment of the repository.
       properties:
         devin_mode:
-          type: string
+          type:
+          - string
+          - null
           title: Devin Mode
         max_scopes:
-          type: integer
+          type:
+          - integer
+          - null
           title: Max Scopes
         repo_name:
           title: Repo Name
@@ -1218,7 +1299,9 @@ components:
           title: Name
           type: string
         next_run_at:
-          type: integer
+          type:
+          - integer
+          - null
           description: When the automation's schedule triggers next fire. null when
             it has no schedule trigger, is disabled, or every schedule has passed
             its end date.
@@ -1274,7 +1357,9 @@ components:
           title: Teams Reply Access
           type: string
         template_id:
-          type: string
+          type:
+          - string
+          - null
           title: Template Id
         tools:
           $ref: '#/components/schemas/AutomationTools'
@@ -1352,7 +1437,9 @@ components:
       additionalProperties: false
       properties:
         scan_id:
-          type: string
+          type:
+          - string
+          - null
           description: The finished code scan to extend with newly landed commits.
             Required when creating or adding this action; on a merge-semantics update,
             omit it to keep the stored value (null is invalid).
@@ -1376,7 +1463,9 @@ components:
         ``type``.'
       properties:
         description:
-          type: string
+          type:
+          - string
+          - null
           title: Description
         fixed:
           default: false
@@ -1389,21 +1478,31 @@ components:
           title: Label
           type: string
         max:
-          type: number
+          type:
+          - number
+          - null
           title: Max
         min:
-          type: number
+          type:
+          - number
+          - null
           title: Min
         multiple:
-          type: boolean
+          type:
+          - boolean
+          - null
           title: Multiple
         options:
           items:
             $ref: '#/components/schemas/AutomationSchemaSelectOption'
-          type: array
+          type:
+          - array
+          - null
           title: Options
         placeholder:
-          type: string
+          type:
+          - string
+          - null
           title: Placeholder
         required:
           default: false
@@ -1413,7 +1512,9 @@ components:
           title: Type
           type: string
         unit:
-          type: string
+          type:
+          - string
+          - null
           title: Unit
       required:
       - type
@@ -1504,7 +1605,9 @@ components:
         mcp_servers:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: MCP server slugs the profile allows (the ceiling for tools.mcp_servers),
             or null when the profile does not restrict MCP servers.
           title: Mcp Servers
@@ -1515,13 +1618,16 @@ components:
       required:
       - name
       - governs_network
+      - mcp_servers
       title: AutomationSchemasSecurityProfile
       type: object
     AutomationSecurityProfileResponse:
       additionalProperties: false
       properties:
         profile_id:
-          type: string
+          type:
+          - string
+          - null
           title: Profile Id
         selection:
           description: 'The automation''s own binding: inherit (no binding), none
@@ -1552,7 +1658,9 @@ components:
       description: The automation's own security-profile binding.
       properties:
         profile_id:
-          type: string
+          type:
+          - string
+          - null
           description: Security profile to bind to this automation. null records an
             explicit opt-out (no profile, even when the org or enterprise has a recommended
             default). Writing this field requires the security-profile management
@@ -1573,12 +1681,16 @@ components:
           $ref: '#/components/schemas/AutomationSessionNotificationsConfig'
           description: Session-content notifications (Slack and Microsoft Teams).
         platform:
-          type: string
+          type:
+          - string
+          - null
           description: VM platform for the session. When null, the session uses the
             organization's default platform at invocation time.
           title: Platform
         playbook_id:
-          type: string
+          type:
+          - string
+          - null
           description: 'Read-only: derived from the first @playbook: token in the
             prompt.'
           title: Playbook Id
@@ -1612,12 +1724,16 @@ components:
           $ref: '#/components/schemas/AutomationSessionNotificationsConfig'
           description: Session-content notifications (Slack and Microsoft Teams).
         platform:
-          type: string
+          type:
+          - string
+          - null
           description: VM platform for the session. When null, the session uses the
             organization's default platform at invocation time.
           title: Platform
         playbook_id:
-          type: string
+          type:
+          - string
+          - null
           description: 'Read-only: derived from the first @playbook: token in the
             prompt.'
           title: Playbook Id
@@ -1663,7 +1779,9 @@ components:
         sessions).'
       properties:
         devin_mode:
-          type: string
+          type:
+          - string
+          - null
           description: null = org default. One of normal, fast, lite, ultra, fusion,
             or a research preview the organization can use (see schemas.available_devin_modes).
             Research previews require fallback_devin_mode; a stored preview the organization
@@ -1677,7 +1795,9 @@ components:
           - lite
           - ultra
           - fusion
-          type: string
+          type:
+          - string
+          - null
           description: Stable mode sessions start in when devin_mode is a research
             preview that is unavailable at run time. Required with a preview devin_mode
             (see schemas.default_fallback_devin_mode), rejected with a stable or null
@@ -1694,7 +1814,9 @@ components:
         sessions).'
       properties:
         devin_mode:
-          type: string
+          type:
+          - string
+          - null
           description: null = org default. One of normal, fast, lite, ultra, fusion,
             or a research preview the organization can use (see schemas.available_devin_modes).
             Research previews require fallback_devin_mode; a stored preview the organization
@@ -1770,7 +1892,9 @@ components:
           title: Source Channel Id
           type: string
         team_id:
-          type: string
+          type:
+          - string
+          - null
           title: Team Id
       required:
       - source_channel_id
@@ -1800,7 +1924,9 @@ components:
           title: Source Channel Id
           type: string
         team_id:
-          type: string
+          type:
+          - string
+          - null
           title: Team Id
       title: AutomationSlackTriageConfig
       type: object
@@ -1822,23 +1948,31 @@ components:
         finding_remediation:
           $ref: '#/components/schemas/AutomationCodeScanFindingRemediation'
         host:
-          type: string
+          type:
+          - string
+          - null
           title: Host
         interactive:
           default: false
           title: Interactive
           type: boolean
         profile_id:
-          type: string
+          type:
+          - string
+          - null
           title: Profile Id
         repo_name:
-          type: string
+          type:
+          - string
+          - null
           description: Repository to scan (owner/name); single mode.
           title: Repo Name
         repos:
           items:
             $ref: '#/components/schemas/AutomationCodeScanRepo'
-          type: array
+          type:
+          - array
+          - null
           description: Repositories covered by the one scan; multi mode.
           title: Repos
         scan_mode:
@@ -1849,7 +1983,9 @@ components:
           title: Scan Mode
           type: string
         scan_type:
-          type: string
+          type:
+          - string
+          - null
           title: Scan Type
         type:
           const: start_code_scan
@@ -1906,7 +2042,9 @@ components:
       additionalProperties: false
       properties:
         prompt:
-          type: string
+          type:
+          - string
+          - null
           description: 'The single source of truth: plain text with inline reference
             tokens (@{owner}/{repo}, @{path}, @playbook:{id}, @skills:{name}, !{macro},
             ${SECRET_NAME}). Kind-prefixed tokens are validated at save; unknown ids
@@ -1982,7 +2120,9 @@ components:
           title: Description
           type: string
         docs_url:
-          type: string
+          type:
+          - string
+          - null
           title: Docs Url
         featured:
           default: false
@@ -2039,7 +2179,9 @@ components:
           items:
             type: string
           minItems: 1
-          type: array
+          type:
+          - array
+          - null
           description: Jira project ids the session's Jira tools are limited to. Null
             (the default) allows every project the run identity can access. Projects
             required by the automation's Jira triggers are always included. While
@@ -2048,7 +2190,9 @@ components:
             stored list; send null to clear it.
           title: Jira Projects
         linear_enabled:
-          type: boolean
+          type:
+          - boolean
+          - null
           description: Grant Linear tools.
           title: Linear Enabled
         mcp_servers:
@@ -2092,7 +2236,9 @@ components:
           type: array
         teams_dm_scope:
           const: installed_users
-          type: string
+          type:
+          - string
+          - null
           description: Allow spawned sessions to open 1:1 Microsoft Teams DMs. DMs
             only reach users who installed the Devin app in Teams personally. Capped
             by Teams Default Access and the governing security profile.
@@ -2148,7 +2294,9 @@ components:
           title: Kind
           type: string
         setup_prompt:
-          type: string
+          type:
+          - string
+          - null
           description: 'How to triage the channel: what counts as an issue, how to
             investigate, and where to route findings. Required when creating or adding
             this action; on a merge-semantics update, omit it to keep the stored value
@@ -2316,24 +2464,34 @@ components:
             - $ref: '#/components/schemas/AutomationStartSessionActionUpdate'
             - $ref: '#/components/schemas/AutomationMessageSessionActionUpdate'
             - $ref: '#/components/schemas/AutomationMonitorSessionActionUpdate'
-          type: array
+          type:
+          - array
+          - null
           title: Actions
         concurrency:
           $ref: '#/components/schemas/AutomationConcurrency'
         enabled:
-          type: boolean
+          type:
+          - boolean
+          - null
           title: Enabled
         limits:
           $ref: '#/components/schemas/AutomationLimits'
         metadata:
           additionalProperties:
-            type: string
-          type: object
+            type:
+            - string
+            - null
+          type:
+          - object
+          - null
           title: Metadata
         name:
           maxLength: 500
           minLength: 1
-          type: string
+          type:
+          - string
+          - null
           title: Name
         notifications:
           $ref: '#/components/schemas/AutomationNotifications'
@@ -2375,14 +2533,18 @@ components:
           - devin_users
           - slack_users
           - external_slack_users
-          type: string
+          type:
+          - string
+          - null
           description: null resets to slack_users.
           title: Slack Reply Access
         teams_reply_access:
           enum:
           - devin_users
           - teams_users
-          type: string
+          type:
+          - string
+          - null
           description: null resets to teams_users.
           title: Teams Reply Access
         tools:
@@ -2390,7 +2552,9 @@ components:
         triggers:
           items:
             $ref: '#/components/schemas/AutomationTriggerRequest-Input'
-          type: array
+          type:
+          - array
+          - null
           title: Triggers
       title: AutomationUpdateRequest
       type: object
@@ -2398,7 +2562,9 @@ components:
       additionalProperties: false
       properties:
         secret:
-          type: string
+          type:
+          - string
+          - null
           description: Present only when newly minted (create or re-add); never retrievable
             again. Replacing triggers preserves the existing secret.
           title: Secret
@@ -2424,7 +2590,9 @@ components:
           title: Blueprint Id
           type: string
         build_on_default_branch_commit:
-          type: boolean
+          type:
+          - boolean
+          - null
           description: Whether each push to the repo's default branch builds the environment.
             Null unless this is a repo's root blueprint.
           title: Build On Default Branch Commit
@@ -2432,10 +2600,14 @@ components:
           title: Created At
           type: integer
         repo_name:
-          type: string
+          type:
+          - string
+          - null
           title: Repo Name
         report_check_runs:
-          type: boolean
+          type:
+          - boolean
+          - null
           description: Whether each commit build is reported as a GitHub check run
             on the commit. Null unless this is a repo's root blueprint.
           title: Report Check Runs
@@ -2454,6 +2626,7 @@ components:
       required:
       - blueprint_id
       - type
+      - repo_name
       - created_at
       - updated_at
       title: Blueprint
@@ -2555,7 +2728,9 @@ components:
           title: Build Id
           type: string
         completed_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Completed At
         created_at:
           title: Created At
@@ -2564,7 +2739,9 @@ components:
           title: Pinned
           type: boolean
         started_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Started At
         status:
           title: Status
@@ -2573,7 +2750,9 @@ components:
           type: string
           title: Trigger
         triggered_by_user_id:
-          type: string
+          type:
+          - string
+          - null
           title: Triggered By User Id
         updated_at:
           title: Updated At
@@ -2581,7 +2760,11 @@ components:
       required:
       - build_id
       - status
+      - trigger
+      - triggered_by_user_id
       - pinned
+      - started_at
+      - completed_at
       - created_at
       - updated_at
       title: Build
@@ -2642,14 +2825,18 @@ components:
       description: Request body for starting a new code scan.
       properties:
         commit_sha:
-          type: string
+          type:
+          - string
+          - null
           description: Commit to check out before scanning.
           title: Commit Sha
         devin_mode:
           enum:
           - fusion
           - swe-2
-          type: string
+          type:
+          - string
+          - null
           description: 'Agent the scan''s sessions run on: ''fusion'' or ''swe-2''
             (SWE-2 Max for ''deep'' effort, SWE-2 High for ''normal''). Applies only
             when the mode is enabled for the organization; otherwise, and when omitted,
@@ -2659,12 +2846,16 @@ components:
           enum:
           - normal
           - deep
-          type: string
+          type:
+          - string
+          - null
           description: 'Scan effort: ''normal'' (default) uses lower model reasoning
             effort with larger investigation batches; ''deep'' runs the full pipeline.'
           title: Effort
         host:
-          type: string
+          type:
+          - string
+          - null
           description: Git host of the repository, if known.
           title: Host
         interactive:
@@ -2674,13 +2865,17 @@ components:
           title: Interactive
           type: boolean
         locale:
-          type: string
+          type:
+          - string
+          - null
           description: 'BCP-47 language tag (e.g. ''ja'') for the scan''s user-facing
             output: finding titles, descriptions, and reports. Omitted means English.'
           title: Locale
         platform:
           maxLength: 128
-          type: string
+          type:
+          - string
+          - null
           description: 'Where the scan''s sessions run: a platform label configured
             for the organization (e.g. ''linux'', ''windows'', ''macos'') or the name
             of an outpost (BYOB) pool, case-insensitive; platforms take priority when
@@ -2689,11 +2884,15 @@ components:
             labels and outpost pool names.'
           title: Platform
         profile_id:
-          type: string
+          type:
+          - string
+          - null
           description: Scan profile to apply to the scan.
           title: Profile Id
         repo_name:
-          type: string
+          type:
+          - string
+          - null
           description: Full name of the repository to scan. Provide exactly one of
             repo_name or repos.
           title: Repo Name
@@ -2701,7 +2900,9 @@ components:
           items:
             $ref: '#/components/schemas/ScanRepoRequest'
           maxItems: 200
-          type: array
+          type:
+          - array
+          - null
           description: Repositories covered by one scan; the first entry is the scan's
             primary repository. Provide exactly one of repo_name or repos.
           title: Repos
@@ -2719,7 +2920,9 @@ components:
           - compliance
           - general
           - migration-docs
-          type: string
+          type:
+          - string
+          - null
           description: Type of scan to run. Must match the profile's scan type when
             a profile is given; defaults to the profile's type, or 'security' for
             profile-less scans. Non-security types require a profile and are rejected
@@ -2763,7 +2966,9 @@ components:
       description: A single code scan finding.
       properties:
         category:
-          type: string
+          type:
+          - string
+          - null
           description: Category (rule name) the finding was classified under, if any.
           title: Category
         code_owners:
@@ -2773,7 +2978,9 @@ components:
           title: Code Owners
           type: array
         code_scan_run_id:
-          type: string
+          type:
+          - string
+          - null
           description: Identifier of the scan run that produced the finding, if known.
           title: Code Scan Run Id
         created_at:
@@ -2781,7 +2988,9 @@ components:
           title: Created At
           type: integer
         description:
-          type: string
+          type:
+          - string
+          - null
           description: Detailed description of the vulnerability, if any.
           title: Description
         finding_id:
@@ -2794,11 +3003,15 @@ components:
             when the finding has not been rated.'
           title: Fix Effort
         note:
-          type: string
+          type:
+          - string
+          - null
           description: Additional note attached to the finding, if any.
           title: Note
         orchestrator_session_id:
-          type: string
+          type:
+          - string
+          - null
           description: Orchestrator session that ran the scan that produced the finding
             (the scan's Devin session), if any.
           title: Orchestrator Session Id
@@ -2809,11 +3022,15 @@ components:
             small fix), deprioritize (medium/low, large fix). Null when unrated.'
           title: Payoff
         pr_url:
-          type: string
+          type:
+          - string
+          - null
           description: URL of the remediation PR opened for this finding, if any.
           title: Pr Url
         recommendation:
-          type: string
+          type:
+          - string
+          - null
           description: Suggested remediation for the finding, if any.
           title: Recommendation
         reference_snippets:
@@ -2838,7 +3055,9 @@ components:
           title: Scan Id
           type: string
         session_id:
-          type: string
+          type:
+          - string
+          - null
           description: Session that remediated the finding (and opened the PR), if
             any.
           title: Session Id
@@ -2851,7 +3070,9 @@ components:
           title: Status
           type: string
         title:
-          type: string
+          type:
+          - string
+          - null
           description: Title of the finding, if any.
           title: Title
         updated_at:
@@ -2865,7 +3086,9 @@ components:
           title: Validation Artifacts
           type: array
         validation_evidence:
-          type: string
+          type:
+          - string
+          - null
           description: Evidence summary recorded by runtime validation, if any.
           title: Validation Evidence
         validation_result:
@@ -2874,16 +3097,27 @@ components:
             or inconclusive.'
           title: Validation Result
         validation_session_id:
-          type: string
+          type:
+          - string
+          - null
           description: Session that recorded the runtime validation outcome, if any.
           title: Validation Session Id
       required:
       - finding_id
+      - title
+      - description
+      - recommendation
+      - note
       - code_owners
       - reference_snippets
       - severity
+      - category
       - repo_name
+      - pr_url
       - scan_id
+      - code_scan_run_id
+      - session_id
+      - orchestrator_session_id
       - status
       - created_at
       - updated_at
@@ -2900,13 +3134,17 @@ components:
         produced them.'
       properties:
         avg_pr_open_duration_seconds:
-          type: number
+          type:
+          - number
+          - null
           description: 'Average time a PR is (or was) open, in seconds: creation to
             merge/close for finished PRs, creation to now for open PRs. Null when
             no PRs were created.'
           title: Avg Pr Open Duration Seconds
         avg_pr_time_to_merge_seconds:
-          type: number
+          type:
+          - number
+          - null
           description: Average time from PR creation to merge, in seconds. Null when
             no PRs have been merged.
           title: Avg Pr Time To Merge Seconds
@@ -2957,6 +3195,8 @@ components:
       - prs_open_count
       - prs_merged_count
       - prs_closed_count
+      - avg_pr_time_to_merge_seconds
+      - avg_pr_open_duration_seconds
       - open_critical_findings_count
       - open_high_findings_count
       - open_medium_findings_count
@@ -2967,7 +3207,9 @@ components:
       description: Full details of a code scan profile, including its guidance.
       properties:
         communication_guidance:
-          type: string
+          type:
+          - string
+          - null
           description: Guidance for the communication phase (acting on final findings,
             e.g. notifying owners or stakeholders), if any.
           title: Communication Guidance
@@ -2976,27 +3218,37 @@ components:
           title: Created At
           type: integer
         description:
-          type: string
+          type:
+          - string
+          - null
           description: Description of the profile, if any.
           title: Description
         exclude_globs:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Glob patterns of files to exclude from the scan, if any.
           title: Exclude Globs
         include_globs:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Glob patterns of files to include in the scan, if any.
           title: Include Globs
         ingestion_source_guidance:
-          type: string
+          type:
+          - string
+          - null
           description: Guidance describing the ingestion source, if any.
           title: Ingestion Source Guidance
         investigation_guidance:
-          type: string
+          type:
+          - string
+          - null
           description: Guidance for the investigation phase, if any.
           title: Investigation Guidance
         mode:
@@ -3008,12 +3260,16 @@ components:
           title: Name
           type: string
         org_id:
-          type: string
+          type:
+          - string
+          - null
           description: Organization that owns the profile. Null when the profile is
             shared account-wide.
           title: Org Id
         post_ingestion_guidance:
-          type: string
+          type:
+          - string
+          - null
           description: Guidance for the post-ingestion phase, if any.
           title: Post Ingestion Guidance
         profile_id:
@@ -3021,17 +3277,23 @@ components:
           title: Profile Id
           type: string
         remediation_guidance:
-          type: string
+          type:
+          - string
+          - null
           description: Guidance for the remediation phase, if any.
           title: Remediation Guidance
         report_guidance:
-          type: string
+          type:
+          - string
+          - null
           description: Guidance for the report phase, if any.
           title: Report Guidance
         scan_paths:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Repository-relative paths the scan is restricted to, if any.
             Null or empty means the whole repository.
           title: Scan Paths
@@ -3040,27 +3302,37 @@ components:
           title: Scan Type
           type: string
         threat_model_guidance:
-          type: string
+          type:
+          - string
+          - null
           description: Guidance describing the threat model, if any.
           title: Threat Model Guidance
         triage_guidance:
-          type: string
+          type:
+          - string
+          - null
           description: Guidance for the triage phase, if any.
           title: Triage Guidance
         type_config:
           additionalProperties: true
-          type: object
+          type:
+          - object
+          - null
           description: Configuration specific to the profile's scan type, if any (e.g.
             a compliance profile's system, framework and criteria).
           title: Type Config
         validation_guidance:
-          type: string
+          type:
+          - string
+          - null
           description: Guidance for the validation phase, if any.
           title: Validation Guidance
         validation_severities:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Finding severities runtime validation covers. Null means the
             default.
           title: Validation Severities
@@ -3072,9 +3344,21 @@ components:
       required:
       - profile_id
       - name
+      - description
       - visibility
+      - org_id
       - scan_type
       - mode
+      - include_globs
+      - exclude_globs
+      - threat_model_guidance
+      - investigation_guidance
+      - triage_guidance
+      - validation_guidance
+      - report_guidance
+      - remediation_guidance
+      - ingestion_source_guidance
+      - post_ingestion_guidance
       - created_at
       title: CodeScanProfileDetailResponse
       type: object
@@ -3102,7 +3386,9 @@ components:
           title: Created At
           type: integer
         description:
-          type: string
+          type:
+          - string
+          - null
           description: Description of the profile, if any.
           title: Description
         mode:
@@ -3114,7 +3400,9 @@ components:
           title: Name
           type: string
         org_id:
-          type: string
+          type:
+          - string
+          - null
           description: Organization that owns the profile. Null when the profile is
             shared account-wide.
           title: Org Id
@@ -3134,7 +3422,9 @@ components:
       required:
       - profile_id
       - name
+      - description
       - visibility
+      - org_id
       - scan_type
       - mode
       - created_at
@@ -3171,7 +3461,9 @@ components:
       description: A code snippet referenced by a finding as supporting evidence.
       properties:
         code:
-          type: string
+          type:
+          - string
+          - null
           description: The referenced source code, if captured.
           title: Code
         commentary:
@@ -3216,7 +3508,9 @@ components:
           title: Effort
           type: string
         host:
-          type: string
+          type:
+          - string
+          - null
           description: Git host of the repository, if known.
           title: Host
         org_id:
@@ -3224,11 +3518,15 @@ components:
           title: Org Id
           type: string
         outpost_pool_id:
-          type: string
+          type:
+          - string
+          - null
           description: Outpost pool the scan's sessions run on, if one is set.
           title: Outpost Pool Id
         platform:
-          type: string
+          type:
+          - string
+          - null
           description: Hosted platform label the scan's sessions run on. Null when
             the scan runs on an outpost pool or the organization default.
           title: Platform
@@ -3236,7 +3534,9 @@ components:
           $ref: '#/components/schemas/CodeScanProfileResponse'
           description: Profile the scan ran under, if any.
         repo_full_name:
-          type: string
+          type:
+          - string
+          - null
           description: Host-qualified identity of the primary repository (e.g. github.com/org/repo).
             Null for Perforce depots, which have no git host.
           title: Repo Full Name
@@ -3266,6 +3566,7 @@ components:
       - scan_id
       - org_id
       - repo_name
+      - host
       - status
       - scan_type
       - created_at
@@ -3320,7 +3621,9 @@ components:
     CreateApiKeyRequest:
       properties:
         expires_at:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional expiration as a UNIX timestamp in seconds. Must be
             in the future if provided.
           title: Expires At
@@ -3336,7 +3639,9 @@ components:
     CreateEnterpriseBlueprintBody:
       properties:
         contents:
-          type: string
+          type:
+          - string
+          - null
           description: YAML body for the new blueprint. Omit to create an empty blueprint.
           title: Contents
       title: CreateEnterpriseBlueprintBody
@@ -3344,12 +3649,16 @@ components:
     CreateOrgBlueprintBody:
       properties:
         contents:
-          type: string
+          type:
+          - string
+          - null
           description: Optional initial YAML body for the blueprint. Not allowed with
             source='git' (contents come from the repo).
           title: Contents
         repo_name:
-          type: string
+          type:
+          - string
+          - null
           description: If set, creates a repo-tier blueprint for that repository.
             If omitted, creates an org-wide (org-tier) blueprint.
           title: Repo Name
@@ -3357,7 +3666,9 @@ components:
           enum:
           - git
           - database
-          type: string
+          type:
+          - string
+          - null
           description: Repo-tier only. 'git' reads .devin/blueprint.yaml (and its
             includes) from the repo's default branch and keeps the blueprint in sync
             with it; 'database' stores the YAML in Devin. Defaults to 'database' when
@@ -3368,7 +3679,9 @@ components:
     CursorPaginationParams:
       properties:
         after:
-          type: string
+          type:
+          - string
+          - null
           title: After
         first:
           default: 100
@@ -3390,15 +3703,21 @@ components:
     DefaultTagResponse:
       properties:
         default_tag:
-          type: string
+          type:
+          - string
+          - null
           title: Default Tag
+      required:
+      - default_tag
       title: DefaultTagResponse
       type: object
     DevinBrainUserSelf:
       description: Identity information for an authenticated Devin brain session.
       properties:
         creator_service_user_id:
-          type: string
+          type:
+          - string
+          - null
           title: Creator Service User Id
         devin_id:
           title: Devin Id
@@ -3436,21 +3755,29 @@ components:
     EnterpriseUser:
       properties:
         email:
-          type: string
+          type:
+          - string
+          - null
           title: Email
         enterprise_joined_at:
-          type: integer
+          type:
+          - integer
+          - null
           description: When the user was added to this enterprise.
           title: Enterprise Joined At
         idp_identities:
           items:
             $ref: '#/components/schemas/IdpIdentity'
-          type: array
+          type:
+          - array
+          - null
           description: The user's identities on the enterprise's SSO connections.
             Only returned when enabled for the enterprise.
           title: Idp Identities
         name:
-          type: string
+          type:
+          - string
+          - null
           title: Name
         role_assignments:
           items:
@@ -3462,22 +3789,30 @@ components:
           type: string
       required:
       - user_id
+      - email
+      - name
       - role_assignments
       title: EnterpriseUser
       type: object
     EnterpriseUserWithIdpRoles:
       properties:
         email:
-          type: string
+          type:
+          - string
+          - null
           title: Email
         enterprise_joined_at:
-          type: integer
+          type:
+          - integer
+          - null
           description: When the user was added to this enterprise.
           title: Enterprise Joined At
         idp_identities:
           items:
             $ref: '#/components/schemas/IdpIdentity'
-          type: array
+          type:
+          - array
+          - null
           description: The user's identities on the enterprise's SSO connections.
             Only returned when enabled for the enterprise.
           title: Idp Identities
@@ -3487,7 +3822,9 @@ components:
           title: Idp Role Assignments
           type: array
         name:
-          type: string
+          type:
+          - string
+          - null
           title: Name
         role_assignments:
           items:
@@ -3499,6 +3836,8 @@ components:
           type: string
       required:
       - user_id
+      - email
+      - name
       - role_assignments
       title: EnterpriseUserWithIdpRoles
       type: object
@@ -3515,7 +3854,9 @@ components:
           title: Note Count
           type: integer
         parent_folder_id:
-          type: string
+          type:
+          - string
+          - null
           title: Parent Folder Id
         path:
           title: Path
@@ -3552,13 +3893,17 @@ components:
           title: Git Connection Id
           type: string
         last_updated_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Last Updated At
         provider_repository_id:
           title: Provider Repository Id
           type: string
         repo_description:
-          type: string
+          type:
+          - string
+          - null
           title: Repo Description
         repo_full_name:
           description: 'Devin''s identifier for the repository, used as repository_path
@@ -3568,7 +3913,9 @@ components:
           title: Repo Full Name
           type: string
         repo_language:
-          type: string
+          type:
+          - string
+          - null
           title: Repo Language
         repo_name:
           title: Repo Name
@@ -3583,6 +3930,9 @@ components:
       - repo_name
       - repo_path
       - repo_full_name
+      - repo_description
+      - last_updated_at
+      - repo_language
       title: GitConnectionRepositoryResponse
       type: object
     GitConnectionResponse:
@@ -3600,24 +3950,31 @@ components:
           title: Host
           type: string
         name:
-          type: string
+          type:
+          - string
+          - null
           title: Name
         perforce_depot_paths:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Depot path scopes for perforce connections, e.g. ["//depot/main/..."].
             Empty list when none are configured. Null for git connections, or for
             a perforce connection whose depot-path lookup failed.
           title: Perforce Depot Paths
         web_viewer_url:
-          type: string
+          type:
+          - string
+          - null
           description: Base URL of the customer's code viewer (e.g. Helix Swarm) used
             to render browsable file/changelist links
           title: Web Viewer Url
       required:
       - git_connection_id
       - git_provider_type
+      - name
       - host
       - created_at
       title: GitConnectionResponse
@@ -3637,23 +3994,31 @@ components:
     GitPermissionCreateRequest:
       properties:
         depot_path:
-          type: string
+          type:
+          - string
+          - null
           title: Depot Path
         git_connection_id:
           title: Git Connection Id
           type: string
         group_prefix:
-          type: string
+          type:
+          - string
+          - null
           title: Group Prefix
         prefix_path:
-          type: string
+          type:
+          - string
+          - null
           title: Prefix Path
         read_only:
           default: false
           title: Read Only
           type: boolean
         repo_path:
-          type: string
+          type:
+          - string
+          - null
           title: Repo Path
       required:
       - git_connection_id
@@ -3662,10 +4027,14 @@ components:
     GitPermissionResponse:
       properties:
         created_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Created At
         depot_path:
-          type: string
+          type:
+          - string
+          - null
           title: Depot Path
         git_connection_id:
           title: Git Connection Id
@@ -3674,17 +4043,23 @@ components:
           title: Git Permission Id
           type: string
         group_prefix:
-          type: string
+          type:
+          - string
+          - null
           title: Group Prefix
         prefix_path:
-          type: string
+          type:
+          - string
+          - null
           title: Prefix Path
         read_only:
           default: false
           title: Read Only
           type: boolean
         repo_path:
-          type: string
+          type:
+          - string
+          - null
           title: Repo Path
       required:
       - git_permission_id
@@ -3694,7 +4069,9 @@ components:
     GitPermissionUpdateRequest:
       properties:
         read_only:
-          type: boolean
+          type:
+          - boolean
+          - null
           title: Read Only
       title: GitPermissionUpdateRequest
       type: object
@@ -3725,7 +4102,9 @@ components:
           title: Reasoning
           type: string
         session_id:
-          type: string
+          type:
+          - string
+          - null
           title: Session Id
         user_message:
           title: User Message
@@ -3736,6 +4115,7 @@ components:
       required:
       - violation_id
       - org_id
+      - session_id
       - event_id
       - guardrail_id
       - guardrail_name
@@ -3749,16 +4129,22 @@ components:
     HypervisorResponse:
       properties:
         cloud_provider_instance_id:
-          type: string
+          type:
+          - string
+          - null
           title: Cloud Provider Instance Id
         created_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Created At
         hypervisor_id:
           title: Hypervisor Id
           type: string
         last_heartbeat:
-          type: integer
+          type:
+          - integer
+          - null
           title: Last Heartbeat
         status:
           title: Status
@@ -3770,6 +4156,9 @@ components:
       - hypervisor_id
       - status
       - utilization_percentage
+      - created_at
+      - last_heartbeat
+      - cloud_provider_instance_id
       title: HypervisorResponse
       type: object
     IdpGroup:
@@ -3809,7 +4198,9 @@ components:
       description: A user whose membership is derived from IDP group assignments.
       properties:
         email:
-          type: string
+          type:
+          - string
+          - null
           title: Email
         idp_role_assignments:
           items:
@@ -3817,13 +4208,17 @@ components:
           title: Idp Role Assignments
           type: array
         name:
-          type: string
+          type:
+          - string
+          - null
           title: Name
         user_id:
           title: User Id
           type: string
       required:
       - user_id
+      - email
+      - name
       - idp_role_assignments
       title: IdpGroupUser
       type: object
@@ -3863,7 +4258,9 @@ components:
           title: Idp Group Name
           type: string
         org_id:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
         role:
           $ref: '#/components/schemas/Role'
@@ -3920,16 +4317,22 @@ components:
           title: Body
           type: string
         folder_id:
-          type: string
+          type:
+          - string
+          - null
           title: Folder Id
         is_enabled:
-          type: boolean
+          type:
+          - boolean
+          - null
           title: Is Enabled
         name:
           title: Name
           type: string
         pinned_repo:
-          type: string
+          type:
+          - string
+          - null
           title: Pinned Repo
         trigger:
           title: Trigger
@@ -3952,7 +4355,9 @@ components:
           title: Created At
           type: integer
         folder_id:
-          type: string
+          type:
+          - string
+          - null
           title: Folder Id
         folder_path:
           title: Folder Path
@@ -3961,7 +4366,9 @@ components:
           title: Is Enabled
           type: boolean
         macro:
-          type: string
+          type:
+          - string
+          - null
           title: Macro
         name:
           title: Name
@@ -3970,10 +4377,14 @@ components:
           title: Note Id
           type: string
         org_id:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
         pinned_repo:
-          type: string
+          type:
+          - string
+          - null
           title: Pinned Repo
         trigger:
           title: Trigger
@@ -3983,6 +4394,7 @@ components:
           type: integer
       required:
       - note_id
+      - folder_id
       - folder_path
       - name
       - body
@@ -3991,6 +4403,9 @@ components:
       - created_at
       - updated_at
       - access_type
+      - org_id
+      - macro
+      - pinned_repo
       title: KnowledgeNoteResponse
       type: object
     NewScanBudget:
@@ -4010,14 +4425,18 @@ components:
       description: Request body for starting a new code scan.
       properties:
         commit_sha:
-          type: string
+          type:
+          - string
+          - null
           description: Commit to check out before scanning.
           title: Commit Sha
         devin_mode:
           enum:
           - fusion
           - swe-2
-          type: string
+          type:
+          - string
+          - null
           description: 'Agent the scan''s sessions run on: ''fusion'' or ''swe-2''
             (SWE-2 Max for ''deep'' effort, SWE-2 High for ''normal''). Applies only
             when the mode is enabled for the organization; otherwise, and when omitted,
@@ -4027,12 +4446,16 @@ components:
           enum:
           - normal
           - deep
-          type: string
+          type:
+          - string
+          - null
           description: 'Scan effort: ''normal'' (default) uses lower model reasoning
             effort with larger investigation batches; ''deep'' runs the full pipeline.'
           title: Effort
         host:
-          type: string
+          type:
+          - string
+          - null
           description: Git host of the repository, if known.
           title: Host
         interactive:
@@ -4042,7 +4465,9 @@ components:
           title: Interactive
           type: boolean
         locale:
-          type: string
+          type:
+          - string
+          - null
           description: 'BCP-47 language tag (e.g. ''ja'') for the scan''s user-facing
             output: finding titles, descriptions, and reports. Omitted means English.'
           title: Locale
@@ -4052,7 +4477,9 @@ components:
             and ManageAcuLimits permissions.
         platform:
           maxLength: 128
-          type: string
+          type:
+          - string
+          - null
           description: 'Where the scan''s sessions run: a platform label configured
             for the organization (e.g. ''linux'', ''windows'', ''macos'') or the name
             of an outpost (BYOB) pool, case-insensitive; platforms take priority when
@@ -4061,11 +4488,15 @@ components:
             labels and outpost pool names.'
           title: Platform
         profile_id:
-          type: string
+          type:
+          - string
+          - null
           description: Scan profile to apply to the scan.
           title: Profile Id
         repo_name:
-          type: string
+          type:
+          - string
+          - null
           description: Full name of the repository to scan. Provide exactly one of
             repo_name or repos.
           title: Repo Name
@@ -4073,7 +4504,9 @@ components:
           items:
             $ref: '#/components/schemas/ScanRepoRequest'
           maxItems: 200
-          type: array
+          type:
+          - array
+          - null
           description: Repositories covered by one scan; the first entry is the scan's
             primary repository. Provide exactly one of repo_name or repos.
           title: Repos
@@ -4091,7 +4524,9 @@ components:
           - compliance
           - general
           - migration-docs
-          type: string
+          type:
+          - string
+          - null
           description: Type of scan to run. Must match the profile's scan type when
             a profile is given; defaults to the profile's type, or 'security' for
             profile-less scans. Non-security types require a profile and are rejected
@@ -4103,20 +4538,30 @@ components:
       description: The organization's default placement for new sessions.
       properties:
         outpost_pool_id:
-          type: string
+          type:
+          - string
+          - null
           description: Outpost pool new sessions run on by default. Null when the
             default is a hosted platform or unset.
           title: Outpost Pool Id
         outpost_pool_name:
-          type: string
+          type:
+          - string
+          - null
           description: Name of the default outpost pool. Null when the default is
             not an outpost pool, or the pool is no longer available to the organization.
           title: Outpost Pool Name
         platform:
-          type: string
+          type:
+          - string
+          - null
           description: Hosted platform label (e.g. 'linux', 'windows') new sessions
             run on by default. Null when the default is an outpost pool or unset.
           title: Platform
+      required:
+      - platform
+      - outpost_pool_id
+      - outpost_pool_name
       title: OrgDefaultPlatformResponse
       type: object
     OrgDefaultPlatformUpdateRequest:
@@ -4129,12 +4574,16 @@ components:
       properties:
         outpost_pool_id:
           maxLength: 128
-          type: string
+          type:
+          - string
+          - null
           description: ID of a shared outpost pool available to the organization.
           title: Outpost Pool Id
         platform:
           maxLength: 128
-          type: string
+          type:
+          - string
+          - null
           description: A hosted platform label configured for the organization (e.g.
             'linux', 'windows', 'macos') or the name of a shared outpost pool, case-insensitive;
             platforms take priority when a name matches both. Unrecognized values
@@ -4146,7 +4595,9 @@ components:
     OrgGroupConfig:
       properties:
         max_cycle_acus:
-          type: integer
+          type:
+          - integer
+          - null
           title: Max Cycle Acus
         org_ids:
           items:
@@ -4173,10 +4624,14 @@ components:
     OrganizationCreateRequest:
       properties:
         max_cycle_acu_limit:
-          type: integer
+          type:
+          - integer
+          - null
           title: Max Cycle Acu Limit
         max_session_acu_limit:
-          type: integer
+          type:
+          - integer
+          - null
           title: Max Session Acu Limit
         name:
           title: Name
@@ -4191,10 +4646,14 @@ components:
           title: Created At
           type: integer
         max_cycle_acu_limit:
-          type: integer
+          type:
+          - integer
+          - null
           title: Max Cycle Acu Limit
         max_session_acu_limit:
-          type: integer
+          type:
+          - integer
+          - null
           title: Max Session Acu Limit
         name:
           title: Name
@@ -4210,25 +4669,35 @@ components:
       - name
       - created_at
       - updated_at
+      - max_session_acu_limit
+      - max_cycle_acu_limit
       title: OrganizationResponse
       type: object
     OrganizationUpdateRequest:
       properties:
         max_cycle_acu_limit:
-          type: integer
+          type:
+          - integer
+          - null
           title: Max Cycle Acu Limit
         max_session_acu_limit:
-          type: integer
+          type:
+          - integer
+          - null
           title: Max Session Acu Limit
         name:
-          type: string
+          type:
+          - string
+          - null
           title: Name
       title: OrganizationUpdateRequest
       type: object
     PaginatedResponse_ACULimitResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4243,7 +4712,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4253,7 +4724,9 @@ components:
     PaginatedResponse_ApiKeyResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4268,7 +4741,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4278,7 +4753,9 @@ components:
     PaginatedResponse_AuditLogResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4293,7 +4770,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4303,7 +4782,9 @@ components:
     PaginatedResponse_AutomationResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4318,7 +4799,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4328,7 +4811,9 @@ components:
     PaginatedResponse_Build_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4343,7 +4828,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4353,7 +4840,9 @@ components:
     PaginatedResponse_CodeScanFindingResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4368,7 +4857,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4378,7 +4869,9 @@ components:
     PaginatedResponse_CodeScanProfileSummaryResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4393,7 +4886,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4403,7 +4898,9 @@ components:
     PaginatedResponse_CodeScanResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4418,7 +4915,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4428,7 +4927,9 @@ components:
     PaginatedResponse_ConsumptionCycle_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4443,7 +4944,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4453,7 +4956,9 @@ components:
     PaginatedResponse_EnterpriseUser_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4468,7 +4973,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4478,7 +4985,9 @@ components:
     PaginatedResponse_GitConnectionRepositoryResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4493,7 +5002,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4503,7 +5014,9 @@ components:
     PaginatedResponse_GitConnectionResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4518,7 +5031,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4528,7 +5043,9 @@ components:
     PaginatedResponse_GitPermissionResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4543,7 +5060,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4553,7 +5072,9 @@ components:
     PaginatedResponse_GuardrailViolationResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4568,7 +5089,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4578,7 +5101,9 @@ components:
     PaginatedResponse_HypervisorResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4593,7 +5118,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4603,7 +5130,9 @@ components:
     PaginatedResponse_IdpGroupResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4618,7 +5147,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4628,7 +5159,9 @@ components:
     PaginatedResponse_IdpGroupUser_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4643,7 +5176,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4653,7 +5188,9 @@ components:
     PaginatedResponse_IdpGroup_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4668,7 +5205,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4678,7 +5217,9 @@ components:
     PaginatedResponse_KnowledgeNoteResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4693,7 +5234,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4703,7 +5246,9 @@ components:
     PaginatedResponse_OrganizationResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4718,7 +5263,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4728,7 +5275,9 @@ components:
     PaginatedResponse_PlaybookResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4743,7 +5292,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4753,7 +5304,9 @@ components:
     PaginatedResponse_RepositoryIndexingResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4768,7 +5321,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4778,7 +5333,9 @@ components:
     PaginatedResponse_RepositoryResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4793,7 +5350,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4803,7 +5362,9 @@ components:
     PaginatedResponse_Role_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4818,7 +5379,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4828,7 +5391,9 @@ components:
     PaginatedResponse_ScheduleResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4843,7 +5408,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4853,7 +5420,9 @@ components:
     PaginatedResponse_SecretResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4868,7 +5437,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4878,7 +5449,9 @@ components:
     PaginatedResponse_ServiceUser_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4893,7 +5466,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4903,7 +5478,9 @@ components:
     PaginatedResponse_SessionInsightsResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4918,7 +5495,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4928,7 +5507,9 @@ components:
     PaginatedResponse_SessionMessage_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4943,7 +5524,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4953,7 +5536,9 @@ components:
     PaginatedResponse_SessionResponse_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4968,7 +5553,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -4978,7 +5565,9 @@ components:
     PaginatedResponse_User_:
       properties:
         end_cursor:
-          type: string
+          type:
+          - string
+          - null
           description: Cursor to fetch the next page, or None if this is the last
             page.
           title: End Cursor
@@ -4993,7 +5582,9 @@ components:
           title: Items
           type: array
         total:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional total count (can be omitted for performance).
           title: Total
       required:
@@ -5010,7 +5601,9 @@ components:
           title: Api Key Name
           type: string
         devin_sessions_org_id:
-          type: string
+          type:
+          - string
+          - null
           description: 'Organization the caller''s Devin Cloud sessions run in: the
             one named with x-cog-org-id, or without it the first organization visible
             to the user. Either way only an organization in which the user may use
@@ -5018,10 +5611,14 @@ components:
             when there is none.'
           title: Devin Sessions Org Id
         org_id:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
         primary_billing_org_id:
-          type: string
+          type:
+          - string
+          - null
           description: 'Organization the user''s CLI and Desktop usage is billed to:
             the account''s organization, or in an enterprise the user''s primary billing
             organization. Null when there is none or the user may not use Devin sessions
@@ -5056,14 +5653,18 @@ components:
           title: Body
           type: string
         macro:
-          type: string
+          type:
+          - string
+          - null
           description: 'Playbook macro identifier. Must start with ''!'' followed
             by one or more letters, digits, underscores, or hyphens. Example: ''!my_macro''
             or ''!my-macro'''
           title: Macro
         structured_output_schema:
           additionalProperties: true
-          type: object
+          type:
+          - object
+          - null
           description: JSON Schema (Draft 7) that sessions using this playbook will
             produce as structured output. Max 64KB. Must be self-contained (no external
             $ref).
@@ -5082,10 +5683,13 @@ components:
           title: Playbook Id
           type: string
         title:
-          type: string
+          type:
+          - string
+          - null
           title: Title
       required:
       - playbook_id
+      - title
       title: PlaybookInfo
       type: object
     PlaybookResponse:
@@ -5103,17 +5707,23 @@ components:
           title: Created By
           type: string
         macro:
-          type: string
+          type:
+          - string
+          - null
           title: Macro
         org_id:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
         playbook_id:
           title: Playbook Id
           type: string
         structured_output_schema:
           additionalProperties: true
-          type: object
+          type:
+          - object
+          - null
           title: Structured Output Schema
         title:
           title: Title
@@ -5128,11 +5738,13 @@ components:
       - playbook_id
       - title
       - body
+      - macro
       - created_by
       - updated_by
       - created_at
       - updated_at
       - access_type
+      - org_id
       title: PlaybookResponse
       type: object
     PrMetricsResponse:
@@ -5254,11 +5866,15 @@ components:
         (422 only).'
       properties:
         detail:
-          type: string
+          type:
+          - string
+          - null
           description: A human-readable explanation specific to this occurrence.
           title: Detail
         error_code:
-          type: string
+          type:
+          - string
+          - null
           description: Machine-readable code for blocked-action refusals (e.g. "user_frozen",
             "migrated_session").
           title: Error Code
@@ -5266,11 +5882,15 @@ components:
           items:
             additionalProperties: true
             type: object
-          type: array
+          type:
+          - array
+          - null
           description: Field-level validation errors (422 responses only).
           title: Errors
         instance:
-          type: string
+          type:
+          - string
+          - null
           description: A URI reference (the request path) for this occurrence.
           title: Instance
         status:
@@ -5339,7 +5959,9 @@ components:
             type: string
           maxItems: 1000
           minItems: 1
-          type: array
+          type:
+          - array
+          - null
           description: Findings to remediate together; all must belong to the scan
             and be open, and may span repositories.
           title: Finding Ids
@@ -5386,7 +6008,9 @@ components:
       description: Filters selecting every remediable finding of a scan.
       properties:
         repo_name:
-          type: string
+          type:
+          - string
+          - null
           description: Only findings reported in this repository.
           title: Repo Name
         severity:
@@ -5399,7 +6023,9 @@ components:
             type: string
           maxItems: 4
           minItems: 1
-          type: array
+          type:
+          - array
+          - null
           description: Only findings with any of these severities (critical, high,
             medium, low).
           title: Severity
@@ -5421,7 +6047,9 @@ components:
     RepoIndexJobResponse:
       properties:
         branch_name:
-          type: string
+          type:
+          - string
+          - null
           title: Branch Name
         commit:
           title: Commit
@@ -5439,6 +6067,7 @@ components:
       - job_id
       - status
       - commit
+      - branch_name
       - created_at
       title: RepoIndexJobResponse
       type: object
@@ -5508,13 +6137,17 @@ components:
         indexing_status:
           $ref: '#/components/schemas/RepoIndexingStatusResponse'
         last_updated_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Last Updated At
         provider_repository_id:
           title: Provider Repository Id
           type: string
         repo_description:
-          type: string
+          type:
+          - string
+          - null
           title: Repo Description
         repo_full_name:
           description: 'Devin''s identifier for the repository, used as repository_path
@@ -5524,7 +6157,9 @@ components:
           title: Repo Full Name
           type: string
         repo_language:
-          type: string
+          type:
+          - string
+          - null
           title: Repo Language
         repo_name:
           title: Repo Name
@@ -5539,6 +6174,9 @@ components:
       - repo_name
       - repo_path
       - repo_full_name
+      - repo_description
+      - last_updated_at
+      - repo_language
       title: RepositoryResponse
       type: object
     Role:
@@ -5561,7 +6199,9 @@ components:
     RoleAssignment:
       properties:
         org_id:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
         role:
           $ref: '#/components/schemas/Role'
@@ -5595,7 +6235,9 @@ components:
     RotateApiKeyRequest:
       properties:
         new_key_expires_at:
-          type: integer
+          type:
+          - integer
+          - null
           description: Optional expiration for the new key as a UNIX timestamp in
             seconds. Null for no expiration.
           title: New Key Expires At
@@ -5629,7 +6271,9 @@ components:
       description: A repository to include in a multi-repo scan.
       properties:
         host:
-          type: string
+          type:
+          - string
+          - null
           description: Git host of the repository, if known.
           title: Host
         repo_name:
@@ -5654,10 +6298,14 @@ components:
           title: Bypass Approval
           type: boolean
         create_as_user_id:
-          type: string
+          type:
+          - string
+          - null
           title: Create As User Id
         frequency:
-          type: string
+          type:
+          - string
+          - null
           title: Frequency
         interval_count:
           default: 1
@@ -5675,7 +6323,9 @@ components:
           title: Notify On
           type: string
         platform:
-          type: string
+          type:
+          - string
+          - null
           description: VM platform for sessions spawned by this schedule (e.g. 'windows').
             When omitted, sessions fall back to the org's default platform at trigger
             time. Value must match a platform configured for the organization (case-insensitive);
@@ -5683,7 +6333,9 @@ components:
             labels.
           title: Platform
         playbook_id:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
         prompt:
           title: Prompt
@@ -5697,25 +6349,35 @@ components:
           type: string
         scheduled_at:
           format: date-time
-          type: string
+          type:
+          - string
+          - null
           title: Scheduled At
         skill_ref:
           $ref: '#/components/schemas/SkillReference'
           description: Exact skill the sessions run with. Use instead of playbook_id
             for new configurations.
         slack_channel_id:
-          type: string
+          type:
+          - string
+          - null
           title: Slack Channel Id
         slack_team_id:
-          type: string
+          type:
+          - string
+          - null
           title: Slack Team Id
         tags:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Tags
         target_devin_id:
-          type: string
+          type:
+          - string
+          - null
           title: Target Devin Id
       required:
       - name
@@ -5739,31 +6401,43 @@ components:
           title: Created At
           type: string
         created_by:
-          type: string
+          type:
+          - string
+          - null
           title: Created By
         enabled:
           title: Enabled
           type: boolean
         frequency:
-          type: string
+          type:
+          - string
+          - null
           title: Frequency
         interval_count:
           default: 1
           title: Interval Count
           type: integer
         last_edited_by:
-          type: string
+          type:
+          - string
+          - null
           title: Last Edited By
         last_error_at:
           format: date-time
-          type: string
+          type:
+          - string
+          - null
           title: Last Error At
         last_error_message:
-          type: string
+          type:
+          - string
+          - null
           title: Last Error Message
         last_executed_at:
           format: date-time
-          type: string
+          type:
+          - string
+          - null
           title: Last Executed At
         name:
           title: Name
@@ -5775,7 +6449,9 @@ components:
           title: Org Id
           type: string
         platform:
-          type: string
+          type:
+          - string
+          - null
           title: Platform
         playbook:
           $ref: '#/components/schemas/PlaybookInfo'
@@ -5788,7 +6464,9 @@ components:
           type: string
         scheduled_at:
           format: date-time
-          type: string
+          type:
+          - string
+          - null
           title: Scheduled At
         scheduled_session_id:
           title: Scheduled Session Id
@@ -5798,18 +6476,26 @@ components:
           description: Exact skill the sessions run with. Use instead of playbook_id
             for new configurations.
         slack_channel_id:
-          type: string
+          type:
+          - string
+          - null
           title: Slack Channel Id
         slack_team_id:
-          type: string
+          type:
+          - string
+          - null
           title: Slack Team Id
         tags:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Tags
         target_devin_id:
-          type: string
+          type:
+          - string
+          - null
           title: Target Devin Id
         updated_at:
           format: date-time
@@ -5818,11 +6504,16 @@ components:
       required:
       - scheduled_session_id
       - org_id
+      - created_by
       - name
       - prompt
+      - frequency
       - enabled
+      - last_executed_at
       - created_at
       - updated_at
+      - last_error_at
+      - last_error_message
       - consecutive_failures
       - notify_on
       - agent
@@ -5834,45 +6525,67 @@ components:
           enum:
           - devin
           - data_analyst
-          type: string
+          type:
+          - string
+          - null
           title: Agent
         bypass_approval:
-          type: boolean
+          type:
+          - boolean
+          - null
           title: Bypass Approval
         enabled:
-          type: boolean
+          type:
+          - boolean
+          - null
           title: Enabled
         frequency:
-          type: string
+          type:
+          - string
+          - null
           title: Frequency
         interval_count:
-          type: integer
+          type:
+          - integer
+          - null
           title: Interval Count
         name:
-          type: string
+          type:
+          - string
+          - null
           title: Name
         notify_on:
           enum:
           - always
           - failure
           - never
-          type: string
+          type:
+          - string
+          - null
           title: Notify On
         platform:
-          type: string
+          type:
+          - string
+          - null
           description: VM platform for sessions spawned by this schedule (e.g. 'windows').
             When omitted, the platform is left unchanged. Value must match a platform
             configured for the organization (case-insensitive); unknown values are
             rejected with a 400 that lists the available platform labels.
           title: Platform
         playbook_id:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
         prompt:
-          type: string
+          type:
+          - string
+          - null
           title: Prompt
         run_as_user_id:
-          type: string
+          type:
+          - string
+          - null
           description: Set the user ID that this schedule will run as. Requires ImpersonateOrgSessions
             permission. Setting to null reverts to the default bot user. Omitting
             the field leaves the current identity unchanged.
@@ -5881,29 +6594,41 @@ components:
           enum:
           - recurring
           - one_time
-          type: string
+          type:
+          - string
+          - null
           title: Schedule Type
         scheduled_at:
           format: date-time
-          type: string
+          type:
+          - string
+          - null
           title: Scheduled At
         skill_ref:
           $ref: '#/components/schemas/SkillReference'
           description: Exact skill the sessions run with. Use instead of playbook_id
             for new configurations.
         slack_channel_id:
-          type: string
+          type:
+          - string
+          - null
           title: Slack Channel Id
         slack_team_id:
-          type: string
+          type:
+          - string
+          - null
           title: Slack Team Id
         tags:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Tags
         target_devin_id:
-          type: string
+          type:
+          - string
+          - null
           title: Target Devin Id
       title: ScheduleUpdateRequest
       type: object
@@ -5927,7 +6652,9 @@ components:
           title: Key
           type: string
         note:
-          type: string
+          type:
+          - string
+          - null
           title: Note
         type:
           enum:
@@ -5960,10 +6687,14 @@ components:
           title: Is Sensitive
           type: boolean
         key:
-          type: string
+          type:
+          - string
+          - null
           title: Key
         note:
-          type: string
+          type:
+          - string
+          - null
           title: Note
         secret_id:
           title: Secret Id
@@ -5972,13 +6703,19 @@ components:
           title: Secret Type
           type: string
         updated_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Updated At
         updated_by:
-          type: string
+          type:
+          - string
+          - null
           title: Updated By
       required:
       - secret_id
+      - key
+      - note
       - is_sensitive
       - created_by
       - created_at
@@ -5989,10 +6726,14 @@ components:
     ServiceUser:
       properties:
         deleted_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Deleted At
         expires_at:
-          type: integer
+          type:
+          - integer
+          - null
           title: Expires At
         name:
           title: Name
@@ -6008,6 +6749,8 @@ components:
       required:
       - service_user_id
       - name
+      - expires_at
+      - deleted_at
       - role_assignments
       title: ServiceUser
       type: object
@@ -6015,7 +6758,9 @@ components:
       description: Identity information for an authenticated service user.
       properties:
         org_id:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
         principal_type:
           const: service_user
@@ -6049,7 +6794,9 @@ components:
           title: Attachment Id
           type: string
         content_type:
-          type: string
+          type:
+          - string
+          - null
           title: Content Type
         name:
           title: Name
@@ -6152,16 +6899,24 @@ components:
             maxLength: 2083
             minLength: 1
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Attachment Urls
         bypass_approval:
-          type: boolean
+          type:
+          - boolean
+          - null
           title: Bypass Approval
         child_playbook_id:
-          type: string
+          type:
+          - string
+          - null
           title: Child Playbook Id
         create_as_user_id:
-          type: string
+          type:
+          - string
+          - null
           title: Create As User Id
         devin_mode:
           enum:
@@ -6173,7 +6928,9 @@ components:
           - swe-2-medium
           - swe-2-high
           - swe-2-max
-          type: string
+          type:
+          - string
+          - null
           description: Override the Devin agent mode for the session. 'normal' uses
             the default Agent mode, 'fast' uses Fast mode, 'lite' uses Devin Lite,
             'ultra' uses Devin Ultra, and 'fusion' uses Fusion. The other values select
@@ -6184,13 +6941,19 @@ components:
         knowledge_ids:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Knowledge Ids
         max_acu_limit:
-          type: integer
+          type:
+          - integer
+          - null
           title: Max Acu Limit
         platform:
-          type: string
+          type:
+          - string
+          - null
           description: "Override the VM platform for the session (e.g. 'windows'),
             or the name of an outpost (BYOB) pool to run the session on one of your
             own machines. When omitted (or set to 'inherit'), a session created by
@@ -6205,7 +6968,9 @@ components:
             and outpost pool names for the org."
           title: Platform
         playbook_id:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
         prompt:
           title: Prompt
@@ -6213,7 +6978,9 @@ components:
         repos:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Repos
         resumable:
           default: true
@@ -6224,7 +6991,9 @@ components:
         secret_ids:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Secret Ids
         security_profile:
           $ref: '#/components/schemas/SessionSecurityProfileSelection'
@@ -6235,32 +7004,44 @@ components:
         session_links:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Session Links
         session_secrets:
           items:
             $ref: '#/components/schemas/SessionSecretInput'
-          type: array
+          type:
+          - array
+          - null
           title: Session Secrets
         structured_output_required:
-          type: boolean
+          type:
+          - boolean
+          - null
           description: "When true (default), the agent MUST call provide_structured_output
             with is_final=true before its turn ends. When false, the tool is available
             but not required — it is not guaranteed to be called in a given turn."
           title: Structured Output Required
         structured_output_schema:
           additionalProperties: true
-          type: object
+          type:
+          - object
+          - null
           description: JSON Schema (Draft 7) for validating structured output. Max
             64KB. Must be self-contained (no external $ref).
           title: Structured Output Schema
         tags:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Tags
         title:
-          type: string
+          type:
+          - string
+          - null
           title: Title
       required:
       - prompt
@@ -6272,7 +7053,9 @@ components:
           title: Action Item
           type: string
         issue_id:
-          type: string
+          type:
+          - string
+          - null
           title: Issue Id
         type:
           default: other
@@ -6347,7 +7130,9 @@ components:
           title: Excerpt
           type: string
         issue_id:
-          type: string
+          type:
+          - string
+          - null
           title: Issue Id
         summary:
           title: Summary
@@ -6452,7 +7237,9 @@ components:
             `analysis` may still hold an older completed result.'
           title: Analysis Status
         automation_id:
-          type: string
+          type:
+          - string
+          - null
           description: ID of the automation that created this session, if any.
           title: Automation Id
         category:
@@ -6463,7 +7250,9 @@ components:
         child_session_ids:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Child Session Ids
         created_at:
           title: Created At
@@ -6487,14 +7276,18 @@ components:
           title: Num User Messages
           type: integer
         on_demand_usage:
-          type: number
+          type:
+          - number
+          - null
           description: On-demand (overage) spend in USD for this session, excluding
             child sessions. Only populated for Teams plans; 0 when the session was
             fully covered by quota. Omitted for other plans. Only populated on get/list
             endpoints.
           title: On Demand Usage
         org_id:
-          type: string
+          type:
+          - string
+          - null
           description: Owning organization. Null for detached sessions, which are
             owned by their creator's account rather than an organization.
           title: Org Id
@@ -6503,10 +7296,14 @@ components:
           description: The origin from which the session was created.
           title: Origin
         parent_session_id:
-          type: string
+          type:
+          - string
+          - null
           title: Parent Session Id
         playbook_id:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
         pull_requests:
           items:
@@ -6518,7 +7315,9 @@ components:
           description: The session's own security-profile binding. Only populated
             on get/list endpoints.
         service_user_id:
-          type: string
+          type:
+          - string
+          - null
           title: Service User Id
         session_id:
           title: Session Id
@@ -6544,12 +7343,16 @@ components:
           title: Status Detail
         structured_output:
           additionalProperties: true
-          type: object
+          type:
+          - object
+          - null
           description: Validated structured output from the session. Only populated
             on get/list endpoints.
           title: Structured Output
         subcategory:
-          type: string
+          type:
+          - string
+          - null
           description: The session's assigned subcategory display name. 'Other' when
             a category is set but no subcategory was assigned or resolved. Only populated
             on get/list endpoints.
@@ -6560,7 +7363,9 @@ components:
           title: Tags
           type: array
         title:
-          type: string
+          type:
+          - string
+          - null
           title: Title
         updated_at:
           title: Updated At
@@ -6569,13 +7374,16 @@ components:
           title: Url
           type: string
         user_id:
-          type: string
+          type:
+          - string
+          - null
           title: User Id
       required:
       - session_id
       - url
       - status
       - tags
+      - org_id
       - created_at
       - updated_at
       - acus_consumed
@@ -6651,7 +7459,9 @@ components:
           title: Description
           type: string
         issue_id:
-          type: string
+          type:
+          - string
+          - null
           title: Issue Id
         title:
           title: Title
@@ -6674,18 +7484,24 @@ components:
           title: Message
           type: string
         origin:
-          type: string
+          type:
+          - string
+          - null
           description: The origin of the message, if available.
           title: Origin
         source:
           title: Source
           type: string
         user_id:
-          type: string
+          type:
+          - string
+          - null
           description: The ID of the user who sent the message, if available.
           title: User Id
         username:
-          type: string
+          type:
+          - string
+          - null
           description: The username of the user who sent the message, if available.
           title: Username
       required:
@@ -6703,13 +7519,17 @@ components:
             maxLength: 2083
             minLength: 1
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Attachment Urls
         message:
           title: Message
           type: string
         message_as_user_id:
-          type: string
+          type:
+          - string
+          - null
           title: Message As User Id
       required:
       - message
@@ -6753,13 +7573,16 @@ components:
     SessionPullRequest:
       properties:
         pr_state:
-          type: string
+          type:
+          - string
+          - null
           title: Pr State
         pr_url:
           title: Pr Url
           type: string
       required:
       - pr_url
+      - pr_state
       title: SessionPullRequest
       type: object
     SessionResponse:
@@ -6768,7 +7591,9 @@ components:
           title: Acus Consumed
           type: number
         automation_id:
-          type: string
+          type:
+          - string
+          - null
           description: ID of the automation that created this session, if any.
           title: Automation Id
         category:
@@ -6779,7 +7604,9 @@ components:
         child_session_ids:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Child Session Ids
         created_at:
           title: Created At
@@ -6795,14 +7622,18 @@ components:
           title: Is Archived
           type: boolean
         on_demand_usage:
-          type: number
+          type:
+          - number
+          - null
           description: On-demand (overage) spend in USD for this session, excluding
             child sessions. Only populated for Teams plans; 0 when the session was
             fully covered by quota. Omitted for other plans. Only populated on get/list
             endpoints.
           title: On Demand Usage
         org_id:
-          type: string
+          type:
+          - string
+          - null
           description: Owning organization. Null for detached sessions, which are
             owned by their creator's account rather than an organization.
           title: Org Id
@@ -6811,10 +7642,14 @@ components:
           description: The origin from which the session was created.
           title: Origin
         parent_session_id:
-          type: string
+          type:
+          - string
+          - null
           title: Parent Session Id
         playbook_id:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
         pull_requests:
           items:
@@ -6826,7 +7661,9 @@ components:
           description: The session's own security-profile binding. Only populated
             on get/list endpoints.
         service_user_id:
-          type: string
+          type:
+          - string
+          - null
           title: Service User Id
         session_id:
           title: Session Id
@@ -6847,12 +7684,16 @@ components:
           title: Status Detail
         structured_output:
           additionalProperties: true
-          type: object
+          type:
+          - object
+          - null
           description: Validated structured output from the session. Only populated
             on get/list endpoints.
           title: Structured Output
         subcategory:
-          type: string
+          type:
+          - string
+          - null
           description: The session's assigned subcategory display name. 'Other' when
             a category is set but no subcategory was assigned or resolved. Only populated
             on get/list endpoints.
@@ -6863,7 +7704,9 @@ components:
           title: Tags
           type: array
         title:
-          type: string
+          type:
+          - string
+          - null
           title: Title
         updated_at:
           title: Updated At
@@ -6872,13 +7715,16 @@ components:
           title: Url
           type: string
         user_id:
-          type: string
+          type:
+          - string
+          - null
           title: User Id
       required:
       - session_id
       - url
       - status
       - tags
+      - org_id
       - created_at
       - updated_at
       - acus_consumed
@@ -6909,7 +7755,9 @@ components:
     SessionSecurityProfileResponse:
       properties:
         profile_id:
-          type: string
+          type:
+          - string
+          - null
           title: Profile Id
         selection:
           description: 'The session''s own binding: inherit (no binding of its own),
@@ -6927,7 +7775,9 @@ components:
       properties:
         profile_id:
           minLength: 1
-          type: string
+          type:
+          - string
+          - null
           description: Security profile to attach to the session; must belong to your
             organization or, for enterprise organizations, its enterprise. null records
             an explicit opt-out (no profile, even when the org or enterprise has a
@@ -6972,12 +7822,16 @@ components:
     SessionsQueryParams:
       properties:
         after:
-          type: string
+          type:
+          - string
+          - null
           title: After
         automation_ids:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter to sessions created by any of these automations
           title: Automation Ids
         category:
@@ -6997,13 +7851,19 @@ components:
           - research_and_exploration
           - security
           - unit_test_generation
-          type: string
+          type:
+          - string
+          - null
           title: Category
         created_after:
-          type: integer
+          type:
+          - integer
+          - null
           title: Created After
         created_before:
-          type: integer
+          type:
+          - integer
+          - null
           title: Created Before
         first:
           default: 100
@@ -7012,7 +7872,9 @@ components:
           title: First
           type: integer
         is_archived:
-          type: boolean
+          type:
+          - boolean
+          - null
           title: Is Archived
         origins:
           items:
@@ -7029,49 +7891,71 @@ components:
             - code_scan
             - other
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Origins
         parent_session_id:
-          type: string
+          type:
+          - string
+          - null
           description: Filter to child sessions spawned by this parent session
           title: Parent Session Id
         playbook_id:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
         repo_names:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter by repository names (e.g., 'owner/repo')
           title: Repo Names
         schedule_id:
-          type: string
+          type:
+          - string
+          - null
           title: Schedule Id
         service_user_ids:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Service User Ids
         session_ids:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Session Ids
         tags:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Tags
         updated_after:
-          type: integer
+          type:
+          - integer
+          - null
           title: Updated After
         updated_before:
-          type: integer
+          type:
+          - integer
+          - null
           title: Updated Before
         user_ids:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: User Ids
       title: SessionsQueryParams
       type: object
@@ -7112,7 +7996,9 @@ components:
             minLength: 1
             type: string
           maxItems: 10
-          type: array
+          type:
+          - array
+          - null
           description: Devin attachment URLs to provide to the scan, e.g. files uploaded
             via the attachments API. The attachments must belong to the organization
             being scanned.
@@ -7121,18 +8007,24 @@ components:
           enum:
           - normal
           - deep
-          type: string
+          type:
+          - string
+          - null
           description: 'Scan effort: ''normal'' (default) uses lower model reasoning
             effort with larger triage and validation batches; ''deep'' runs the full
             pipeline.'
           title: Effort
         host:
-          type: string
+          type:
+          - string
+          - null
           description: Git host of the repository, if known.
           title: Host
         platform:
           maxLength: 128
-          type: string
+          type:
+          - string
+          - null
           description: 'Where the scan''s sessions run: a platform label configured
             for the organization (e.g. ''linux'', ''windows'', ''macos'') or the name
             of an outpost (BYOB) pool, case-insensitive; platforms take priority when
@@ -7146,7 +8038,9 @@ components:
           title: Profile Id
           type: string
         repo_name:
-          type: string
+          type:
+          - string
+          - null
           description: Full name of the repository to scan. Provide exactly one of
             repo_name or repos.
           title: Repo Name
@@ -7154,7 +8048,9 @@ components:
           items:
             $ref: '#/components/schemas/ScanRepoRequest'
           maxItems: 200
-          type: array
+          type:
+          - array
+          - null
           description: Repositories covered by one scan; the first entry is the scan's
             primary repository. Provide exactly one of repo_name or repos.
           title: Repos
@@ -7174,9 +8070,12 @@ components:
           title: Sessions Count
           type: integer
         subcategory_id:
-          type: string
+          type:
+          - string
+          - null
           title: Subcategory Id
       required:
+      - subcategory_id
       - display_name
       - sessions_count
       - acus
@@ -7236,23 +8135,31 @@ components:
         — only repo-tier blueprints have them.\nDoes NOT trigger a build."
       properties:
         build_on_default_branch_commit:
-          type: boolean
+          type:
+          - boolean
+          - null
           description: If set, turns building the environment on each push to the
             default branch on or off. Only accepted on the root blueprint of a github.com
             repo. Every such push queues a build.
           title: Build On Default Branch Commit
         contents:
-          type: string
+          type:
+          - string
+          - null
           description: If set, replaces the blueprint's YAML body with a new version.
           title: Contents
         position:
-          type: integer
+          type:
+          - integer
+          - null
           description: If set, updates the execution position of this repo-tier blueprint.
             Positions are not required to be unique; ties are broken arbitrarily by
             the server when sorting for execution.
           title: Position
         report_check_runs:
-          type: boolean
+          type:
+          - boolean
+          - null
           description: If set, turns reporting each commit build as a GitHub check
             run on or off. Enabling it requires 'build_on_default_branch_commit' to
             be on.
@@ -7261,7 +8168,9 @@ components:
           enum:
           - git
           - database
-          type: string
+          type:
+          - string
+          - null
           description: If set, switches the repo's blueprint source. Only accepted
             on the repo's root blueprint (scoped blueprints inherit it). 'git' pulls
             .devin/blueprint.yaml from the default branch (404 if absent) and cannot
@@ -7295,10 +8204,14 @@ components:
     User:
       properties:
         email:
-          type: string
+          type:
+          - string
+          - null
           title: Email
         name:
-          type: string
+          type:
+          - string
+          - null
           title: Name
         role_assignments:
           items:
@@ -7310,6 +8223,8 @@ components:
           type: string
       required:
       - user_id
+      - email
+      - name
       - role_assignments
       title: User
       type: object
@@ -7342,7 +8257,9 @@ components:
       description: User with both direct and IDP-group-derived role assignments.
       properties:
         email:
-          type: string
+          type:
+          - string
+          - null
           title: Email
         idp_role_assignments:
           items:
@@ -7350,7 +8267,9 @@ components:
           title: Idp Role Assignments
           type: array
         name:
-          type: string
+          type:
+          - string
+          - null
           title: Name
         role_assignments:
           items:
@@ -7362,6 +8281,8 @@ components:
           type: string
       required:
       - user_id
+      - email
+      - name
       - role_assignments
       title: UserWithIdpRoles
       type: object
@@ -7369,7 +8290,9 @@ components:
       description: Identity information for an authenticated Windsurf session user.
       properties:
         devin_sessions_org_id:
-          type: string
+          type:
+          - string
+          - null
           description: 'Organization the caller''s Devin Cloud sessions run in: the
             one named with x-cog-org-id, or without it the first organization visible
             to the user. Either way only an organization in which the user may use
@@ -7380,7 +8303,9 @@ components:
           title: Org Id
           type: string
         primary_billing_org_id:
-          type: string
+          type:
+          - string
+          - null
           description: 'Organization the user''s CLI and Desktop usage is billed to:
             the account''s organization, or in an enterprise the user''s primary billing
             organization. Null when there is none or the user may not use Devin sessions
@@ -7394,7 +8319,9 @@ components:
           title: User Id
           type: string
         user_name:
-          type: string
+          type:
+          - string
+          - null
           title: User Name
       required:
       - principal_type
@@ -7436,19 +8363,25 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       - in: query
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -7530,7 +8463,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -7546,7 +8481,9 @@ paths:
         name: scan_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter to findings produced by this scan.
           title: Scan Id
       - description: Filter to findings reported in this repository.
@@ -7554,7 +8491,9 @@ paths:
         name: repo_name
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter to findings reported in this repository.
           title: Repo Name
       - description: Filter to findings with any of these severities (critical, high,
@@ -7570,7 +8509,9 @@ paths:
             - medium
             - low
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter to findings with any of these severities (critical,
             high, medium, low).
           title: Severity
@@ -7586,7 +8527,9 @@ paths:
             - dismissed
             - resolved
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter to findings with any of these statuses (open, dismissed,
             resolved).
           title: Status
@@ -7605,7 +8548,9 @@ paths:
             - deprioritize
             type: string
           maxItems: 4
-          type: array
+          type:
+          - array
+          - null
           description: Filter to findings in any of these payoff quadrants (quick_win,
             big_fix, easy_fix, deprioritize). Unrated findings (null fix_effort) never
             match.
@@ -7615,7 +8560,9 @@ paths:
         name: created_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           description: Findings created at or after this unix timestamp (seconds).
           title: Created After
       - description: Findings created at or before this unix timestamp (seconds).
@@ -7623,7 +8570,9 @@ paths:
         name: created_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           description: Findings created at or before this unix timestamp (seconds).
           title: Created Before
       - description: Findings updated at or after this unix timestamp (seconds).
@@ -7631,7 +8580,9 @@ paths:
         name: updated_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           description: Findings updated at or after this unix timestamp (seconds).
           title: Updated After
       - description: Findings updated at or before this unix timestamp (seconds).
@@ -7639,7 +8590,9 @@ paths:
         name: updated_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           description: Findings updated at or before this unix timestamp (seconds).
           title: Updated Before
       - description: Filter to findings in these organizations.
@@ -7649,7 +8602,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter to findings in these organizations.
           title: Org Ids
       responses:
@@ -7728,7 +8683,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Org Ids
       responses:
         '200':
@@ -7792,7 +8749,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -7811,7 +8770,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Only return profiles visible to these organizations. Defaults
             to all organizations in the account.
           title: Org Ids
@@ -7941,19 +8902,25 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       - in: query
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -7971,7 +8938,9 @@ paths:
         name: repo_name
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter to scans that scanned this repository. Matches multi-repo
             scans even when the repository is not the scan's primary repo, so returned
             items may report a different repo_name.
@@ -7983,7 +8952,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter to scans in these organizations.
           title: Org Ids
       responses:
@@ -8041,7 +9012,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -8221,7 +9194,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -8299,13 +9274,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -8382,13 +9361,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -8467,13 +9450,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -8551,13 +9538,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -8633,13 +9624,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -8695,7 +9690,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -8766,7 +9763,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -8781,7 +9780,9 @@ paths:
         name: filter_name
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Filter Name
       responses:
         '200':
@@ -8838,7 +9839,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -8917,7 +9920,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -9354,7 +10359,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -9372,25 +10379,33 @@ paths:
           enum:
           - org
           - enterprise
-          type: string
+          type:
+          - string
+          - null
           title: Access Type
       - in: query
         name: search
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Search
       - in: query
         name: folder_path
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Folder Path
       - in: query
         name: pinned_repo
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Pinned Repo
       responses:
         '200':
@@ -9679,7 +10694,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -9979,7 +10996,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -9995,7 +11014,9 @@ paths:
         name: email
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter by exact email address
           title: Email
       responses:
@@ -10053,7 +11074,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -10371,7 +11394,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -10387,7 +11412,9 @@ paths:
         name: email
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter by exact email address
           title: Email
       responses:
@@ -10702,7 +11729,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Org Ids
       - in: query
         name: min_sessions
@@ -10797,7 +11826,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Org Ids
       - in: query
         name: min_sessions
@@ -10893,7 +11924,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Org Ids
       - in: query
         name: min_sessions
@@ -10972,7 +12005,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: User Ids
       - in: query
         name: service_user_ids
@@ -10980,7 +12015,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Service User Ids
       - in: query
         name: time_before
@@ -11000,13 +12037,17 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Org Ids
       - in: query
         name: playbook_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
       responses:
         '200':
@@ -11077,7 +12118,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Org Ids
       responses:
         '200':
@@ -11140,7 +12183,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: User Ids
       - in: query
         name: service_user_ids
@@ -11148,7 +12193,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Service User Ids
       - in: query
         name: time_before
@@ -11168,13 +12215,17 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Org Ids
       - in: query
         name: playbook_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
       responses:
         '200':
@@ -11246,7 +12297,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Org Ids
       responses:
         '200':
@@ -11308,13 +12361,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -11396,7 +12453,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Org Ids
       - in: query
         name: min_sessions
@@ -11582,7 +12641,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -11902,19 +12963,25 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       - in: query
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -12822,7 +13889,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -13166,7 +14235,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -13507,7 +14578,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -13523,7 +14596,9 @@ paths:
         name: email
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter by exact email address
           title: Email
       responses:
@@ -13589,7 +14664,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -13882,7 +14959,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -13898,7 +14977,9 @@ paths:
         name: email
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter by exact email address
           title: Email
       responses:
@@ -14174,13 +15255,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -14729,7 +15814,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -15048,7 +16135,9 @@ paths:
         name: commit_sha
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Commit SHA to look up (full or short prefix). Defaults to the
             PR's current head commit when omitted.
           examples:
@@ -15229,7 +16318,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -15352,7 +16443,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -15369,31 +16462,41 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Session Ids
       - in: query
         name: created_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Created After
       - in: query
         name: created_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Created Before
       - in: query
         name: updated_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Updated After
       - in: query
         name: updated_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Updated Before
       - in: query
         name: tags
@@ -15401,13 +16504,17 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Tags
       - in: query
         name: playbook_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
       - in: query
         name: origins
@@ -15427,13 +16534,17 @@ paths:
             - code_scan
             - other
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Origins
       - in: query
         name: schedule_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Schedule Id
       - in: query
         name: user_ids
@@ -15441,7 +16552,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: User Ids
       - in: query
         name: service_user_ids
@@ -15449,7 +16562,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Service User Ids
       - description: Filter by repository names (e.g., 'owner/repo')
         in: query
@@ -15458,7 +16573,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter by repository names (e.g., 'owner/repo')
           title: Repo Names
       - in: query
@@ -15481,13 +16598,17 @@ paths:
           - research_and_exploration
           - security
           - unit_test_generation
-          type: string
+          type:
+          - string
+          - null
           title: Category
       - in: query
         name: is_archived
         required: false
         schema:
-          type: boolean
+          type:
+          - boolean
+          - null
           title: Is Archived
       - description: Filter to sessions created by any of these automations
         in: query
@@ -15496,7 +16617,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter to sessions created by any of these automations
           title: Automation Ids
       - description: Filter to child sessions spawned by this parent session
@@ -15504,7 +16627,9 @@ paths:
         name: parent_session_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter to child sessions spawned by this parent session
           title: Parent Session Id
       - in: query
@@ -15513,7 +16638,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Org Ids
       - in: query
         name: include_deleted_orgs
@@ -15579,7 +16706,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -15596,31 +16725,41 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Session Ids
       - in: query
         name: created_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Created After
       - in: query
         name: created_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Created Before
       - in: query
         name: updated_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Updated After
       - in: query
         name: updated_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Updated Before
       - in: query
         name: tags
@@ -15628,13 +16767,17 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Tags
       - in: query
         name: playbook_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
       - in: query
         name: origins
@@ -15654,13 +16797,17 @@ paths:
             - code_scan
             - other
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Origins
       - in: query
         name: schedule_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Schedule Id
       - in: query
         name: user_ids
@@ -15668,7 +16815,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: User Ids
       - in: query
         name: service_user_ids
@@ -15676,7 +16825,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Service User Ids
       - description: Filter by repository names (e.g., 'owner/repo')
         in: query
@@ -15685,7 +16836,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter by repository names (e.g., 'owner/repo')
           title: Repo Names
       - in: query
@@ -15708,13 +16861,17 @@ paths:
           - research_and_exploration
           - security
           - unit_test_generation
-          type: string
+          type:
+          - string
+          - null
           title: Category
       - in: query
         name: is_archived
         required: false
         schema:
-          type: boolean
+          type:
+          - boolean
+          - null
           title: Is Archived
       - description: Filter to sessions created by any of these automations
         in: query
@@ -15723,7 +16880,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter to sessions created by any of these automations
           title: Automation Ids
       - description: Filter to child sessions spawned by this parent session
@@ -15731,7 +16890,9 @@ paths:
         name: parent_session_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter to child sessions spawned by this parent session
           title: Parent Session Id
       - in: query
@@ -15740,7 +16901,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Org Ids
       - in: query
         name: include_deleted_orgs
@@ -15805,14 +16968,18 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       - in: query
         name: org_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
       responses:
         '200':
@@ -15870,14 +17037,18 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       - in: query
         name: org_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
       responses:
         '200':
@@ -15942,14 +17113,18 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       - in: query
         name: org_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
       responses:
         '200':
@@ -16014,14 +17189,18 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       - in: query
         name: org_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
       responses:
         '200':
@@ -16080,7 +17259,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       - in: query
@@ -16092,7 +17273,9 @@ paths:
         name: org_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
       responses:
         '200':
@@ -16150,14 +17333,18 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       - in: query
         name: org_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
       requestBody:
         content:
@@ -16221,14 +17408,18 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       - in: query
         name: org_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
       responses:
         '200':
@@ -16285,14 +17476,18 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       - in: query
         name: org_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
       requestBody:
         content:
@@ -16355,14 +17550,18 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       - in: query
         name: org_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Org Id
       requestBody:
         content:
@@ -17115,7 +18314,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -17130,25 +18331,33 @@ paths:
         name: search
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Search
       - in: query
         name: creator_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Creator Id
       - in: query
         name: enabled
         required: false
         schema:
-          type: boolean
+          type:
+          - boolean
+          - null
           title: Enabled
       - in: query
         name: event_type
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Event Type
       - in: query
         name: agent_types
@@ -17165,7 +18374,9 @@ paths:
             - incident_session
             - code_scan
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Agent Types
       responses:
         '200':
@@ -17305,7 +18516,9 @@ paths:
         name: security_profile_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Resolve `default_net_policy` and `security_profile` for a create
             that sets `security_profile.profile_id` to this profile. Requires the
             security-profile management permission.
@@ -17732,7 +18945,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -17748,7 +18963,9 @@ paths:
         name: scan_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter to findings produced by this scan.
           title: Scan Id
       - description: Filter to findings reported in this repository.
@@ -17756,7 +18973,9 @@ paths:
         name: repo_name
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter to findings reported in this repository.
           title: Repo Name
       - description: Filter to findings with any of these severities (critical, high,
@@ -17772,7 +18991,9 @@ paths:
             - medium
             - low
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter to findings with any of these severities (critical,
             high, medium, low).
           title: Severity
@@ -17788,7 +19009,9 @@ paths:
             - dismissed
             - resolved
             type: string
-          type: array
+          type:
+          - array
+          - null
           description: Filter to findings with any of these statuses (open, dismissed,
             resolved).
           title: Status
@@ -17807,7 +19030,9 @@ paths:
             - deprioritize
             type: string
           maxItems: 4
-          type: array
+          type:
+          - array
+          - null
           description: Filter to findings in any of these payoff quadrants (quick_win,
             big_fix, easy_fix, deprioritize). Unrated findings (null fix_effort) never
             match.
@@ -17817,7 +19042,9 @@ paths:
         name: created_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           description: Findings created at or after this unix timestamp (seconds).
           title: Created After
       - description: Findings created at or before this unix timestamp (seconds).
@@ -17825,7 +19052,9 @@ paths:
         name: created_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           description: Findings created at or before this unix timestamp (seconds).
           title: Created Before
       - description: Findings updated at or after this unix timestamp (seconds).
@@ -17833,7 +19062,9 @@ paths:
         name: updated_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           description: Findings updated at or after this unix timestamp (seconds).
           title: Updated After
       - description: Findings updated at or before this unix timestamp (seconds).
@@ -17841,7 +19072,9 @@ paths:
         name: updated_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           description: Findings updated at or before this unix timestamp (seconds).
           title: Updated Before
       responses:
@@ -18067,7 +19300,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -18220,19 +19455,25 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       - in: query
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -18250,7 +19491,9 @@ paths:
         name: repo_name
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter to scans that scanned this repository. Matches multi-repo
             scans even when the repository is not the scan's primary repo, so returned
             items may report a different repo_name.
@@ -18940,13 +20183,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -19025,13 +20272,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -19110,13 +20361,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -19193,13 +20448,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -19323,7 +20582,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -19338,19 +20599,25 @@ paths:
         name: search
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Search
       - in: query
         name: folder_path
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Folder Path
       - in: query
         name: pinned_repo
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Pinned Repo
       responses:
         '200':
@@ -19947,7 +21214,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: User Ids
       - in: query
         name: service_user_ids
@@ -19955,7 +21224,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Service User Ids
       - in: query
         name: time_before
@@ -19973,7 +21244,9 @@ paths:
         name: playbook_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
       responses:
         '200':
@@ -20111,7 +21384,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: User Ids
       - in: query
         name: service_user_ids
@@ -20119,7 +21394,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Service User Ids
       - in: query
         name: time_before
@@ -20137,7 +21414,9 @@ paths:
         name: playbook_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Playbook Id
       responses:
         '200':
@@ -20202,13 +21481,17 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       responses:
         '200':
@@ -20361,7 +21644,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -20740,7 +22025,9 @@ paths:
         name: commit_sha
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Commit SHA to look up (full or short prefix). Defaults to the
             PR's current head commit when omitted.
           examples:
@@ -20877,7 +22164,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -20892,7 +22181,9 @@ paths:
         name: filter_name
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Filter Name
       - in: query
         name: only_repo_paths
@@ -20900,7 +22191,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Only Repo Paths
       - in: query
         name: exclude_repo_paths
@@ -20908,7 +22201,9 @@ paths:
         schema:
           items:
             type: string
-          type: array
+          type:
+          - array
+          - null
           title: Exclude Repo Paths
       - in: query
         name: load_indexing_status
@@ -21048,7 +22343,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -21064,7 +22361,9 @@ paths:
         name: filter_name
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Case-insensitive substring filter on the repository path.
           title: Filter Name
       responses:
@@ -21843,7 +23142,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -22041,7 +23342,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - in: query
@@ -22053,7 +23356,9 @@ paths:
         name: devin_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Devin Id
       responses:
         '200':
@@ -22110,14 +23415,18 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - in: query
         name: devin_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Devin Id
       requestBody:
         content:
@@ -22183,7 +23492,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - in: query
@@ -22195,7 +23506,9 @@ paths:
         name: devin_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Devin Id
       responses:
         '200':
@@ -22253,7 +23566,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -22261,7 +23576,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       - description: Whether to archive the Devin session
@@ -22328,7 +23645,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -22336,7 +23655,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       responses:
@@ -22395,7 +23716,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -22403,7 +23726,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       responses:
@@ -22462,7 +23787,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -22470,7 +23797,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       responses:
@@ -22536,7 +23865,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -22544,7 +23875,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       responses:
@@ -22610,7 +23943,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -22618,7 +23953,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       responses:
@@ -22678,7 +24015,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -22686,14 +24025,18 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       - in: query
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -22760,7 +24103,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -22768,7 +24113,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       requestBody:
@@ -22833,7 +24180,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -22841,7 +24190,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       responses:
@@ -22899,7 +24250,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -22907,7 +24260,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       requestBody:
@@ -22971,7 +24326,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -22979,7 +24336,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       requestBody:
@@ -23044,7 +24403,9 @@ paths:
         name: org_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: org-abc123def456
           title: Org Id
       - description: 'Devin session ID (prefix: devin-)'
@@ -23052,7 +24413,9 @@ paths:
         name: devin_id
         required: true
         schema:
-          type: string
+          type:
+          - string
+          - null
           example: devin-abc123def456
           title: Devin Id
       responses:
@@ -23118,7 +24481,9 @@ paths:
         name: repo_name
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter to a specific repository (e.g. 'org/repo').
           title: Repo Name
       responses:
@@ -23724,7 +25089,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -23746,7 +25113,9 @@ paths:
           - succeeded
           - failed
           - cancelled
-          type: string
+          type:
+          - string
+          - null
           description: Filter by spec status.
           title: Status
       - description: 'If true, returns 0 or 1 items: the build whose image is currently
@@ -23755,7 +25124,9 @@ paths:
         name: active
         required: false
         schema:
-          type: boolean
+          type:
+          - boolean
+          - null
           description: 'If true, returns 0 or 1 items: the build whose image is currently
             used by new sessions.'
           title: Active
@@ -24313,7 +25684,9 @@ paths:
         required: false
         schema:
           pattern: ^[a-zA-Z0-9][a-zA-Z0-9_./-]{0,199}$
-          type: string
+          type:
+          - string
+          - null
           description: Model family such as kimi-k3 (every reasoning effort combined),
             or one model ID such as kimi-k3-high (case-insensitive). Omit for all
             models, reported by family.
@@ -24332,7 +25705,9 @@ paths:
           - p95
           - p99
           - ratio
-          type: string
+          type:
+          - string
+          - null
           description: 'Counters: sum. Distributions: avg, p50, p90, p95 (default),
             p99. Streaming share: ratio.'
           title: Aggregation
@@ -24401,19 +25776,25 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       - in: query
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -24428,13 +25809,17 @@ paths:
         name: session_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Session Id
       - in: query
         name: guardrail_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Guardrail Id
       responses:
         '200':
@@ -24509,19 +25894,25 @@ paths:
         name: time_before
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time Before
       - in: query
         name: time_after
         required: false
         schema:
-          type: integer
+          type:
+          - integer
+          - null
           title: Time After
       - in: query
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -24536,13 +25927,17 @@ paths:
         name: session_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Session Id
       - in: query
         name: guardrail_id
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: Guardrail Id
       responses:
         '200':
@@ -25041,7 +26436,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -25057,7 +26454,9 @@ paths:
         name: email
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter by exact email address
           title: Email
       responses:
@@ -25123,7 +26522,9 @@ paths:
         name: after
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           title: After
       - in: query
         name: first
@@ -25139,7 +26540,9 @@ paths:
         name: email
         required: false
         schema:
-          type: string
+          type:
+          - string
+          - null
           description: Filter by exact email address
           title: Email
       responses:
