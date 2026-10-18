@@ -35,15 +35,23 @@ milestones as the release plan, tags as versions) and the habits of YDelivery's
 - When the reviewer's re-run on the head reads `owed 0 / to re-read 0`, and the owner approves:
   `gh pr merge N --merge --auto`.
 
-**Closing milestone M_n**, done in the PR that completes it and right after it merges:
+**Closing milestone M_n**, done in the PR that completes it and right after it merges. The
+milestone is the one source: its title ends in the tag, its description is the done-when, and
+the completing PR set `DevinKick.version` (`Sources/DevinKickKit/DevinKick.swift`) to that tag.
+Only `number` is typed; M_n is milestone n + 1. M6 has no tag, so it closes without a release.
 
 ```bash
-# in the completing PR: DevinKick.version = "0.(n+1).0" (Sources/DevinKickKit/DevinKick.swift)
+number=2                                              # M1
+milestone=repos/laconicman/devin-kick/milestones/$number
+title=$(gh api $milestone --jq .title)                # "M1 · CLI core — 0.2.0"
+tag=${title##* — }                                    # "0.2.0": no v prefix (SwiftPM)
+done_when=$(gh api $milestone --jq .description)
+done_when=${done_when%% Close with tag*}              # drop the closing note
 git switch main && git pull --ff-only
-git tag -a 0.2.0 -m "<the milestone's done-when sentence>"        # no v prefix (SwiftPM)
-git push origin 0.2.0
-gh release create 0.2.0 --verify-tag --generate-notes --title "0.2.0 — M1 · CLI core"
-gh api repos/laconicman/devin-kick/milestones/<number> -X PATCH -f state=closed
+git tag -a "$tag" -m "$done_when"
+git push origin "$tag"
+gh release create "$tag" --verify-tag --generate-notes --title "$tag — ${title% — *}"
+gh api $milestone -X PATCH -f state=closed
 ```
 
 **Never:**
