@@ -44,6 +44,53 @@ public struct SessionSnapshot: Sendable, Hashable {
 }
 
 extension DevinKick {
+    /// `GET …/sessions/{id}`.
+    public func session(_ id: String) async throws(KickError) -> SessionSnapshot {
+        let orgID = try configuration.requireOrgID()
+        return SessionSnapshot(try await call(Operations.GetSession.id) {
+            try await client.getSession(path: .init(orgId: orgID, devinId: id)).ok.body.json
+        })
+    }
+
+    /// Reads where `argument` (a session id, run id or run directory) stands.
+    public func observe(_ argument: String) async -> Reading {
+        let run = await store.lookup(argument)
+        guard let sessionID = run?.sessionID ?? (run == nil ? argument : nil) else {
+            return Self.reading(argument, unstartedRun: run)
+        }
+        do throws(KickError) {
+            return observation(argument, run: run, session: try await session(sessionID))
+        } catch {
+            return Reading(argument: argument, run: run, session: nil, verdict: nil, outcome: .unreadable(error))
+        }
+    }
+
+    /// The reading of `session`, with the verdict its run's record allows.
+    func observation(_ argument: String, run: RunState?, session: SessionSnapshot) -> Reading {
+        let verdict = OutputVerdict(output: session.structuredOutput, repliedByKick: run?.replied ?? false)
+        let settlement = Settlement(status: session.status, detail: session.statusDetail, output: verdict)
+        return Reading(argument: argument, run: run, session: session, verdict: verdict, outcome: .settled(settlement))
+    }
+
+    /// A run with no session: refused at create (failed), or an orphan not yet found (unknown).
+    static func reading(_ argument: String, unstartedRun run: RunState?) -> Reading {
+        let settlement: Settlement = if let failure = run?.failure {
+            .failed(status: "not created", detail: failure)
+        } else {
+            .unknown(status: "requested", detail: "no session found under its run tag yet")
+        }
+        return Reading(argument: argument, run: run, session: nil, verdict: nil, outcome: .settled(settlement))
+    }
+
+    /// Every session carrying `tag` on the server, read from one listing.
+    public func observe(tagged tag: String) async throws(KickError) -> [Reading] {
+        var readings: [Reading] = []
+        for session in try await sessions(tagged: tag) {
+            readings.append(observation(session.id, run: await store.lookup(session.id), session: session))
+        }
+        return readings
+    }
+
     /// The most sessions one listing page asks for (the spec's `SessionsQueryParams.first`).
     static let listPageSize = 200
 

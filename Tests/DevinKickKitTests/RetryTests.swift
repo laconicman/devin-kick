@@ -35,7 +35,7 @@ struct RetryTests {
         let principal = try await DevinKick.scripted(transport, sleeps: sleeps).whoami()
         #expect(principal.type == "pat_user")
         #expect(await transport.count("get_self") == 2)
-        let delays = await sleeps.delays
+        let delays = sleeps.delays
         #expect(delays.count == 1)
         #expect(delays.allSatisfy { Self.isBackoff($0, around: 1) })
     }
@@ -48,7 +48,7 @@ struct RetryTests {
         let sleeps = SleepRecorder()
         _ = try await DevinKick.scripted(transport, sleeps: sleeps).whoami()
         // A date in the past asks for no wait at all.
-        #expect(await sleeps.delays == [value == "3" ? .seconds(3) : .zero])
+        #expect(sleeps.delays == [value == "3" ? .seconds(3) : .zero])
     }
 
     /// Longer than 60 s is surfaced as the 429 it is, so the caller retries later.
@@ -61,7 +61,7 @@ struct RetryTests {
             try await DevinKick.scripted(transport, sleeps: sleeps).whoami()
         }
         #expect(await transport.count("get_self") == 1)
-        #expect(await sleeps.delays.isEmpty)
+        #expect(sleeps.delays.isEmpty)
     }
 
     @Test func exhausted5xxRetriesFourTimesAndSurfacesAsRetryable() async throws {
@@ -76,7 +76,7 @@ struct RetryTests {
             #expect(error.exitCode == 69)
         }
         #expect(await transport.count("get_self") == 5)
-        let delays = await sleeps.delays
+        let delays = sleeps.delays
         #expect(delays.count == 4)
         #expect(zip(delays, [1.0, 2, 4, 8]).allSatisfy { Self.isBackoff($0, around: $1) })
     }

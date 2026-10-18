@@ -17,7 +17,7 @@ struct KickCommand: AsyncParsableCommand {
         \(ExitStatus.help)
         """,
         version: DevinKick.version,
-        subcommands: [WhoAmI.self, UploadCommand.self, StartCommand.self]
+        subcommands: [WhoAmI.self, UploadCommand.self, StartCommand.self, StatusCommand.self, WaitCommand.self]
     )
 }
 
@@ -52,10 +52,21 @@ func printError(_ message: String) {
 
 /// Runs `body`, printing a ``KickError`` to stderr and exiting with its documented status.
 func reportingKickErrors(_ body: () async throws(KickError) -> Void) async throws {
-    do {
+    try await exitingWithStatus { () async throws(KickError) -> Int32 in
         try await body()
+        return 0
+    }
+}
+
+/// Runs `body` and exits with the status it returns, or with a ``KickError``'s, printed to
+/// stderr.
+func exitingWithStatus(_ body: () async throws(KickError) -> Int32) async throws {
+    let code: Int32
+    do {
+        code = try await body()
     } catch {
         printError(error.localizedDescription)
         throw ExitCode(error.exitCode)
     }
+    if code != 0 { throw ExitCode(code) }
 }

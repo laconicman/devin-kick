@@ -99,7 +99,11 @@ struct Timing: Sendable {
     /// How long a create whose answer was lost is given to appear in the listing by its run tag
     /// before an empty listing counts (Design: "Never lost; duplicates found, not prevented").
     var createSettle: Duration = .seconds(15)
+    /// The pacing of `wait` and `run`.
+    var polling = PollingPolicy()
     var sleep: @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
+    /// The clock deadlines are measured on; tests advance it as they "sleep".
+    var now: @Sendable () -> ContinuousClock.Instant = { .now }
 
     static let standard = Timing()
 }

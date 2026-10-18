@@ -94,7 +94,7 @@ struct StartTests {
         let started = try await kick.start(try sandbox.request(kick))
         #expect(started.sessionID == "00000000000000000000000000000009")
         #expect(await transport.count("create_session") == 1)
-        #expect(await sleeps.delays.isEmpty, "found on the first listing: no settle")
+        #expect(sleeps.delays.isEmpty, "found on the first listing: no settle")
     }
 
     @Test func anEmptyListingCountsOnlyAfterTheSettleThenTheCreateIsRetried() async throws {
@@ -112,7 +112,7 @@ struct StartTests {
         #expect(await transport.count("create_session") == 2)
         // Two listings around the settle, then one after the retry to catch a late duplicate.
         #expect(await transport.count("get_sessions") == 3)
-        #expect(await sleeps.delays.first == .seconds(15))
+        #expect(sleeps.delays.first == .seconds(15))
     }
 
     @Test func theEarliestOfTwoSessionsUnderOneRunTagIsTheRun() async throws {

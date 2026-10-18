@@ -2,6 +2,7 @@
 import Foundation
 import HTTPTypes
 import OpenAPIRuntime
+import Synchronization
 import Testing
 
 /// A `ClientTransport` that answers each operation from a script and records what was sent, so
@@ -89,17 +90,18 @@ actor ScriptedTransport: ClientTransport {
     }
 }
 
-/// Records the delays the Kit asked for instead of sleeping.
-actor SleepRecorder {
-    private(set) var delays: [Duration] = []
+/// Records the delays the Kit asked for instead of sleeping, and advances a virtual clock by
+/// each, so deadlines pass without real waiting.
+final class SleepRecorder: Sendable {
+    private let state = Mutex<(delays: [Duration], elapsed: Duration)>(([], .zero))
+    private let start = ContinuousClock.now
 
-    func record(_ delay: Duration) {
-        delays.append(delay)
-    }
+    var delays: [Duration] { state.withLock { $0.delays } }
 
-    nonisolated var timing: Timing {
+    var timing: Timing {
         var timing = Timing()
-        timing.sleep = { [self] delay in await self.record(delay) }
+        timing.sleep = { [self] delay in state.withLock { $0.delays.append(delay); $0.elapsed += delay } }
+        timing.now = { [self] in start + state.withLock { $0.elapsed } }
         return timing
     }
 }
