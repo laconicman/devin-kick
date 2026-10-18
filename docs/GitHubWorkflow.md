@@ -38,7 +38,8 @@ milestones as the release plan, tags as versions) and the habits of YDelivery's
 **Closing milestone M_n**, done in the PR that completes it and right after it merges. The
 milestone is the one source: its title ends in the tag, its description is the done-when, and
 the completing PR set `DevinKick.version` (`Sources/DevinKickKit/DevinKick.swift`) to that tag.
-Only `number` is typed; M_n is milestone n + 1. M6 has no tag, so it closes without a release.
+Only `number` is typed; M_n is milestone n + 1. Each step runs only if the one before it
+succeeded, so a milestone closes only once its release exists.
 
 ```bash
 number=2                                              # M1
@@ -47,12 +48,16 @@ title=$(gh api $milestone --jq .title)                # "M1 · CLI core — 0.2.
 tag=${title##* — }                                    # "0.2.0": no v prefix (SwiftPM)
 done_when=$(gh api $milestone --jq .description)
 done_when=${done_when%% Close with tag*}              # drop the closing note
-git switch main && git pull --ff-only
-git tag -a "$tag" -m "$done_when"
-git push origin "$tag"
-gh release create "$tag" --verify-tag --generate-notes --title "$tag — ${title% — *}"
+[[ $tag =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] &&             # a title without a tag stops here
+git switch main && git pull --ff-only &&
+git tag -a "$tag" -m "$done_when" &&
+git push origin "$tag" &&
+gh release create "$tag" --verify-tag --generate-notes --title "$tag — ${title% — *}" &&
 gh api $milestone -X PATCH -f state=closed
 ```
+
+M6 has no tag and no release; it closes with the last command alone
+(`gh api repos/laconicman/devin-kick/milestones/7 -X PATCH -f state=closed`).
 
 **Never:**
 - poll CI;
