@@ -147,6 +147,37 @@ struct SaveTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path) == ["report.txt"])
     }
 
+    /// The download follows only https host names (PR #11 review, r4308715368).
+    @Test(arguments: [
+        ("https://devin-public-attachments.s3.dualstack.us-west-2.amazonaws.com/a/b?X-Amz-Signature=x", true),
+        ("https://s3-0.test/bucket/x", true),
+        ("http://devin-public-attachments.s3.amazonaws.com/a", false),
+        ("https://169.254.169.254/latest/meta-data", false),
+        ("https://[fd00::1]/x", false),
+        ("https://localhost/x", false),
+        ("https://printer.local/x", false),
+        ("https://metadata.google.internal/x", false),
+    ])
+    func onlyHTTPSHostNamesAreFollowed(_ location: String, follows: Bool) throws {
+        #expect(StripAuthorizationOnRedirect.mayFollow(try #require(URL(string: location))) == follows)
+    }
+
+    @Test func aRedirectToAnInternalAddressFailsTheDownload() async throws {
+        let api = "api-\(UUID().uuidString.lowercased()).test"
+        RedirectingURLProtocol.routes.withLock {
+            $0[api] = .init(location: URL(string: "https://169.254.169.254/latest/meta-data"))
+        }
+        let transport = ScriptedTransport([:])
+        let kick = try DevinKick.scripted(transport, environment: ["KICK_SERVER_URL": "https://\(api)"])
+        let attachment = SessionAttachment(id: Self.attachmentID, name: "notes.txt", url: "https://app.devin.ai/x", source: "devin", contentType: nil)
+        await #expect {
+            try await kick.download(attachment, to: temporaryDirectory().appending(path: "notes.txt"))
+        } throws: { error in
+            (error as? KickError)?.localizedDescription.contains("only https host names are followed") == true
+        }
+        #expect(RedirectingURLProtocol.requests(to: "169.254.169.254").isEmpty)
+    }
+
     @Test func saveRecreatesADeletedRunDirectory() async throws {
         let transport = ScriptedTransport([
             "get_session": [.json(Fixture.session(id: Self.sessionID))],

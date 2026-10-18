@@ -313,7 +313,9 @@ uuid, and a user's upload is listed with `source: user`.
   headers; the key goes to no other host.
 - A redirect delegate removes `Authorization` before the hop. That is required, not hygiene: the
   presigned URL answers 400 to a request carrying it (live). URLSession on macOS 26 already drops
-  it on this cross-host redirect (measured); the delegate keeps it so whatever the OS does.
+  it on this cross-host redirect (measured); the delegate keeps it so whatever the OS does. It
+  follows only `https` to a host name, never an IP literal, `localhost` or a local or internal
+  name, so a compromised endpoint can't point the client at internal services.
 - The server's name is sent as one percent-encoded segment, so `../x` can't become dot-segments,
   and saved as a safe basename (no separators, no `..`, no leading dot, capped, numbered if
   taken); a changed name is recorded in the index.

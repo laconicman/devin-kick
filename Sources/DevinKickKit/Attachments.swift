@@ -40,7 +40,28 @@ final class StripAuthorizationOnRedirect: NSObject, URLSessionTaskDelegate, Send
         var request = request
         offered.withLock { $0.append(request.value(forHTTPHeaderField: "Authorization") != nil) }
         request.setValue(nil, forHTTPHeaderField: "Authorization")
+        guard let url = request.url, Self.mayFollow(url) else {
+            refused.withLock { $0 = request.url }
+            return nil
+        }
         return request
+    }
+
+    /// A redirect the delegate declined to follow, if any.
+    let refused = Mutex<URL?>(nil)
+
+    /// Host names that never belong to a presigned download: local or internal.
+    static let localSuffixes = [".local", ".localhost", ".internal", ".home.arpa"]
+
+    /// Whether a redirect may be followed: `https`, to a host *name*. Live, the hop goes to S3
+    /// (or an organization's IP-enforcing proxy); an IP literal, `localhost` or a local name
+    /// would let a compromised endpoint point the client at internal services (PR #11 review,
+    /// r4308715368).
+    static func mayFollow(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "https", let host = url.host()?.lowercased(), !host.isEmpty else { return false }
+        let isIPv4 = host.allSatisfy { $0.isNumber || $0 == "." }
+        let isIPv6 = host.contains(":")
+        return !isIPv4 && !isIPv6 && host != "localhost" && !localSuffixes.contains(where: host.hasSuffix)
     }
 }
 
@@ -116,6 +137,9 @@ extension DevinKick {
             do {
                 let (file, response) = try await session.download(for: request)
                 let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                if let refused = delegate.refused.withLock({ $0 }) {
+                    throw KickError.server(status: status, code: nil, detail: "the download redirected to \(refused.host() ?? "an unnamed host") over \(refused.scheme ?? "no scheme"); only https host names are followed")
+                }
                 if (200..<300).contains(status) {
                     try Self.move(file, to: destination)
                     let offered = delegate.offered.withLock { $0 }

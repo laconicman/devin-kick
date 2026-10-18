@@ -39,7 +39,13 @@ final class RedirectingURLProtocol: URLProtocol {
             let response = HTTPURLResponse(url: url, statusCode: 307, httpVersion: "HTTP/1.1", headerFields: ["Location": location.absoluteString])
             var redirected = request
             redirected.url = location
-            if let response { client?.urlProtocol(self, wasRedirectedTo: redirected, redirectResponse: response) }
+            guard let response else { return }
+            client?.urlProtocol(self, wasRedirectedTo: redirected, redirectResponse: response)
+            // Followed, the system starts a new load and drops this one. Declined (the delegate
+            // returns nil), URLSession delivers the redirect response itself as the answer, so
+            // the load finishes with it, as a real HTTP load does.
+            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            client?.urlProtocolDidFinishLoading(self)
             return
         }
         let response = HTTPURLResponse(url: url, statusCode: route.status, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/octet-stream"])
