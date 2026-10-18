@@ -148,15 +148,23 @@ extension DevinKick {
         return text.addingPercentEncoding(withAllowedCharacters: allowed) ?? text
     }
 
+    /// Installs the downloaded `file` at `destination`. It is first moved beside the destination
+    /// (which may cross volumes), then swapped in atomically, so a failure never costs a copy
+    /// saved earlier (PR #11 review, r4308714933).
     static func move(_ file: URL, to destination: URL) throws(KickError) {
+        let staged = destination.deletingLastPathComponent()
+            .appending(path: ".\(destination.lastPathComponent).\(UUID().uuidString).part")
         do {
             try RunStore.createPrivateDirectory(destination.deletingLastPathComponent())
+            try FileManager.default.moveItem(at: file, to: staged)
             if FileManager.default.fileExists(atPath: destination.path) {
-                try FileManager.default.removeItem(at: destination)
+                _ = try FileManager.default.replaceItemAt(destination, withItemAt: staged)
+            } else {
+                try FileManager.default.moveItem(at: staged, to: destination)
             }
-            try FileManager.default.moveItem(at: file, to: destination)
         } catch {
-            throw .store("Couldn't save \(destination.path) (\(error.localizedDescription)).")
+            try? FileManager.default.removeItem(at: staged)
+            throw .store("Couldn't save \(destination.path) (\(error.localizedDescription)); a copy saved earlier is untouched.")
         }
     }
 }

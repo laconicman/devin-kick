@@ -122,6 +122,23 @@ struct SaveTests {
         #expect(!FileManager.default.fileExists(atPath: result.path))
     }
 
+    /// A repeat download replaces the saved copy only once the new one is in place, and a failed
+    /// install leaves the old copy (PR #11 review, r4308714933).
+    @Test func anAttachmentIsReplacedAtomically() throws {
+        let directory = temporaryDirectory()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let destination = directory.appending(path: "report.txt")
+        try Data("old".utf8).write(to: destination)
+        let fresh = directory.appending(path: "download.tmp")
+        try Data("new".utf8).write(to: fresh)
+        try DevinKick.move(fresh, to: destination)
+        #expect(try String(contentsOf: destination, encoding: .utf8) == "new")
+        // A download that vanished can't be installed: the saved copy stays, and nothing is left behind.
+        #expect(throws: KickError.self) { try DevinKick.move(directory.appending(path: "missing.tmp"), to: destination) }
+        #expect(try String(contentsOf: destination, encoding: .utf8) == "new")
+        #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path) == ["report.txt"])
+    }
+
     @Test func saveRecreatesADeletedRunDirectory() async throws {
         let transport = ScriptedTransport([
             "get_session": [.json(Fixture.session(id: Self.sessionID))],
