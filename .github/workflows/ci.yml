@@ -1,0 +1,40 @@
+# Builds and tests the package on every PR and on main. Devin Review reads the diff; this runs
+# the offline tests (the live ones need a key and stay local). Public repo: runner minutes are
+# free.
+#
+# The manifest is swift-tools-version 6.4. No hosted image carries Xcode 27 yet (macos-26 tops
+# out at Xcode 26.6, 2026-10-18), so the toolchain comes from swift.org through
+# swift-actions/setup-swift; the SDK is the image's default Xcode. When an image ships Xcode 27,
+# drop the setup step and use the image's toolchain, as SimKDSKit does.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build and test
+    runs-on: macos-26
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: swift-actions/setup-swift@v2
+        with:
+          swift-version: "6.4"
+
+      - name: Toolchain
+        run: swift --version
+
+      - name: Build
+        run: swift build
+
+      - name: Test
+        run: swift test
