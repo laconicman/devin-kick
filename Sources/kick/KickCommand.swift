@@ -17,7 +17,7 @@ struct KickCommand: AsyncParsableCommand {
         \(ExitStatus.help)
         """,
         version: DevinKick.version,
-        subcommands: [WhoAmI.self]
+        subcommands: [WhoAmI.self, UploadCommand.self]
     )
 }
 
@@ -35,6 +35,13 @@ struct WhoAmI: AsyncParsableCommand {
             print("principal_type: \(principal.type)")
             if let name = principal.name { print("name: \(name)") }
         }
+    }
+}
+
+extension DevinKick {
+    /// The façade over the environment's configuration, warnings to stderr.
+    static func fromEnvironment() throws(KickError) -> DevinKick {
+        DevinKick(configuration: try Configuration.fromEnvironment())
     }
 }
 

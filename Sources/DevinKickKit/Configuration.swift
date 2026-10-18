@@ -11,6 +11,9 @@ public struct Configuration: Sendable {
     public var serverURL: URL
     /// The run store's root (`KICK_STORE`): see ``RunStore``.
     public var storeURL: URL
+    /// The directories uploads may come from (`KICK_UPLOAD_ROOTS`, colon-separated). `nil`
+    /// when unset: then kick uploads nothing, because uploads are permanent.
+    public var uploadRoots: [String]?
 
     public static let defaultServerURL = URL(string: "https://api.devin.ai")!
 
@@ -19,14 +22,19 @@ public struct Configuration: Sendable {
         URL.applicationSupportDirectory.appending(path: "devin-kick", directoryHint: .isDirectory)
     }
 
-    public init(apiKey: String, orgID: String?, serverURL: URL = defaultServerURL, storeURL: URL = defaultStoreURL) {
+    public init(
+        apiKey: String, orgID: String?, serverURL: URL = defaultServerURL, storeURL: URL = defaultStoreURL,
+        uploadRoots: [String]? = nil
+    ) {
         self.apiKey = apiKey
         self.orgID = orgID
         self.serverURL = serverURL
         self.storeURL = storeURL
+        self.uploadRoots = uploadRoots
     }
 
-    /// Reads `DEVIN_API_KEY`, and optionally `DEVIN_ORG_ID`, `KICK_SERVER_URL` and `KICK_STORE`.
+    /// Reads `DEVIN_API_KEY`, and optionally `DEVIN_ORG_ID`, `KICK_SERVER_URL`, `KICK_STORE` and
+    /// `KICK_UPLOAD_ROOTS`.
     public static func fromEnvironment(
         _ environment: [String: String] = ProcessInfo.processInfo.environment
     ) throws(KickError) -> Configuration {
@@ -44,7 +52,10 @@ public struct Configuration: Sendable {
         if let store = environment["KICK_STORE"], !store.isEmpty {
             storeURL = URL(fileURLWithPath: NSString(string: store).expandingTildeInPath, isDirectory: true)
         }
-        return Configuration(apiKey: apiKey, orgID: orgID, serverURL: serverURL, storeURL: storeURL)
+        let uploadRoots = environment["KICK_UPLOAD_ROOTS"]
+            .map { $0.split(separator: ":").map { NSString(string: String($0)).expandingTildeInPath } }
+            .flatMap { $0.isEmpty ? nil : $0 }
+        return Configuration(apiKey: apiKey, orgID: orgID, serverURL: serverURL, storeURL: storeURL, uploadRoots: uploadRoots)
     }
 
     /// The organization id, or a configuration error naming the variable to set.

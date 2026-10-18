@@ -106,10 +106,7 @@ public actor RunStore {
 
     func makeDirectory(_ directory: URL) throws(KickError) {
         do {
-            try FileManager.default.createDirectory(
-                at: directory, withIntermediateDirectories: true,
-                attributes: [.posixPermissions: Int(Self.directoryPermissions.rawValue)]
-            )
+            try Self.createPrivateDirectory(directory)
         } catch {
             throw .store("Couldn't create \(directory.path) (\(error.localizedDescription)). Check KICK_STORE or --out.")
         }
@@ -130,10 +127,7 @@ public actor RunStore {
     @discardableResult
     func writeDerived(_ data: Data, to url: URL) -> Bool {
         do {
-            try FileManager.default.createDirectory(
-                at: url.deletingLastPathComponent(), withIntermediateDirectories: true,
-                attributes: [.posixPermissions: Int(Self.directoryPermissions.rawValue)]
-            )
+            try Self.createPrivateDirectory(url.deletingLastPathComponent())
             try data.write(to: url, options: .atomic)
             return true
         } catch {
@@ -146,25 +140,39 @@ public actor RunStore {
 
     /// Appends `event` to the index as one line, in one `write(2)`, and folds it into the map.
     func append(_ event: IndexEvent) throws(KickError) {
-        var line: Data
+        let line: Data
         do {
             line = try Self.encoder.encode(event)
         } catch {
             throw .store("Couldn't encode an index event (\(error.localizedDescription)).")
         }
-        line.append(UInt8(ascii: "\n"))
+        try makeDirectory(root)
         do {
-            try makeDirectory(root)
-            let descriptor = try FileDescriptor.open(
-                FilePath(indexURL.path), .writeOnly, options: [.append, .create], permissions: Self.filePermissions
-            )
-            try descriptor.closeAfter { _ = try descriptor.writeAll(line) }
-        } catch let error as KickError {
-            throw error
+            try Self.appendLine(line, to: indexURL)
         } catch {
             throw .store("Couldn't append to \(indexURL.path) (\(error.localizedDescription)). The run is not recorded; check KICK_STORE.")
         }
         fold(event)
+    }
+
+    /// Creates `directory` and any missing parents, owner-only (`0700`); an existing one is
+    /// left as it is.
+    static func createPrivateDirectory(_ directory: URL) throws {
+        try FileManager.default.createDirectory(
+            at: directory, withIntermediateDirectories: true,
+            attributes: [.posixPermissions: Int(directoryPermissions.rawValue)]
+        )
+    }
+
+    /// Appends `line` and a newline to `url` in one `write(2)` on an `O_APPEND` descriptor,
+    /// creating the file `0600`. See the type's comment for why that needs no lock.
+    static func appendLine(_ line: Data, to url: URL) throws {
+        var line = line
+        line.append(UInt8(ascii: "\n"))
+        let descriptor = try FileDescriptor.open(
+            FilePath(url.path), .writeOnly, options: [.append, .create], permissions: filePermissions
+        )
+        try descriptor.closeAfter { _ = try descriptor.writeAll(line) }
     }
 
     /// Every run the index knows, by run id. Read once; appends keep it current.

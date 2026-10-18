@@ -16,6 +16,8 @@ public struct DevinKick: Sendable {
     let timing: Timing
     /// The run store at ``Configuration/storeURL``.
     public let store: RunStore
+    /// The upload cache beside it.
+    let uploads: UploadCache
 
     /// `warn` receives what the Kit reports without failing: a derived file it couldn't write,
     /// a mode the organization may not offer.
@@ -35,6 +37,7 @@ public struct DevinKick: Sendable {
         self.configuration = configuration
         self.timing = timing
         self.store = RunStore(root: configuration.storeURL, warn: warn)
+        self.uploads = UploadCache(url: configuration.storeURL.appending(path: "uploads.jsonl"), warn: warn)
         self.client = Client(
             serverURL: configuration.serverURL,
             transport: transport,
