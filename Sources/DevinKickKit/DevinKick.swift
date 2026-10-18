@@ -22,6 +22,9 @@ public struct DevinKick: Sendable {
     let modes = ModeCatalog()
     /// Where the Kit reports what doesn't fail a call.
     let warn: RunStore.Warn
+    /// The URLSession configuration attachment downloads use (``download(_:to:)``); tests
+    /// inject a `URLProtocol` through it.
+    let downloadConfiguration: @Sendable () -> URLSessionConfiguration
 
     /// `warn` receives what the Kit reports without failing: a derived file it couldn't write,
     /// a mode the organization may not offer.
@@ -36,11 +39,13 @@ public struct DevinKick: Sendable {
         configuration: Configuration,
         transport: any ClientTransport,
         timing: Timing = .standard,
-        warn: @escaping RunStore.Warn = RunStore.standardError
+        warn: @escaping RunStore.Warn = RunStore.standardError,
+        downloadConfiguration: @escaping @Sendable () -> URLSessionConfiguration = { .ephemeral }
     ) {
         self.configuration = configuration
         self.timing = timing
         self.warn = warn
+        self.downloadConfiguration = downloadConfiguration
         self.store = RunStore(root: configuration.storeURL, warn: warn)
         self.uploads = UploadCache(url: configuration.storeURL.appending(path: "uploads.jsonl"), warn: warn)
         self.client = Client(

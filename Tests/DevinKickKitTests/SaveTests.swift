@@ -1,0 +1,130 @@
+@testable import DevinKickKit
+import Foundation
+import HTTPTypes
+import Synchronization
+import Testing
+
+@Suite("Messages, attachments and save — into the run directory")
+struct SaveTests {
+    static let sessionID = "0000000000000000000000000000000c"
+    static let attachmentID = "00000000-0000-0000-0000-00000000000c"
+    static let finalOutput = #"{"answer_md":"a","doubts":[],"questions_for_user":[],"kick_final":true}"#
+
+    static func message(_ text: String, at time: Int, source: String = "devin") -> String {
+        #"{"event_id":"e\#(time)","source":"\#(source)","message":"\#(text)","created_at":\#(time)}"#
+    }
+
+    @Test func messagesDrainForwardAndKeepTheTail() async throws {
+        let transport = ScriptedTransport(["get_session_messages": [
+            .json(#"{"items":[\#(Self.message("one", at: 1, source: "user"))],"has_next_page":true,"end_cursor":"c1"}"#),
+            .json(#"{"items":[\#(Self.message(#"two\nsecond line"#, at: 2)),\#(Self.message("three", at: 3))],"has_next_page":false}"#),
+        ]])
+        let kick = try DevinKick.scripted(transport)
+        let all = try await kick.messages(Self.sessionID)
+        #expect(all.map(\.message) == ["one", "two\nsecond line", "three"])
+        #expect(all[1].compactLine.hasSuffix("  devin  two"))
+        let requests = await transport.sent.map { $0.request.path ?? "" }
+        #expect(requests.first?.contains("first=200") == true)
+        #expect(requests.last?.contains("after=c1") == true)
+
+        await transport.script("get_session_messages", [
+            .json(#"{"items":[\#(Self.message("one", at: 1))],"has_next_page":true,"end_cursor":"c1"}"#),
+            .json(#"{"items":[\#(Self.message("two", at: 2))],"has_next_page":true,"end_cursor":"c1"}"#),
+        ])
+        // A cursor that doesn't move stops the drain instead of looping.
+        #expect(try await kick.messages(Self.sessionID, last: 1).map(\.message) == ["two"])
+    }
+
+    @Test(arguments: [
+        ("../../request.json", "request.json"),
+        ("/etc/passwd", "passwd"),
+        ("..\\..\\win.ini", "win.ini"),
+        (".hidden", "hidden"),
+        ("..", "attachment"),
+        ("", "attachment"),
+        ("tab\there\u{0}.txt", "tabhere.txt"),
+        ("report.pdf", "report-2.pdf"),
+    ])
+    func attachmentNamesAreReducedToSafeBasenames(_ name: String, expected: String) {
+        #expect(DevinKick.safeName(name, taken: ["report.pdf"]) == expected)
+    }
+
+    @Test func aLongNameKeepsItsExtensionWithinTheCap() {
+        let name = DevinKick.safeName(String(repeating: "я", count: 300) + ".tar.gz", taken: [])
+        #expect(name.utf8.count <= DevinKick.maximumNameBytes)
+        #expect(name.hasSuffix(".gz"))
+    }
+
+    /// A session kick didn't start: save adopts it as a run, writes every file, and the
+    /// presigned hop of the attachment download carries no `Authorization`.
+    @Test func saveWritesEveryFileAndStripsTheKeyOnTheRedirect() async throws {
+        let api = "api-\(UUID().uuidString.lowercased()).test"
+        let presigned = "s3-\(UUID().uuidString.lowercased()).test"
+        RedirectingURLProtocol.routes.withLock {
+            $0[api] = .init(location: URL(string: "https://\(presigned)/bucket/\(Self.attachmentID)?X-Amz-Signature=x"))
+            $0[presigned] = .init(body: Data("attachment bytes".utf8))
+        }
+        let transport = ScriptedTransport([
+            "get_session": [.json(Fixture.session(id: Self.sessionID, detail: "waiting_for_user", output: Self.finalOutput))],
+            "get_session_messages": [.json(#"{"items":[\#(Self.message("hello", at: 1, source: "user"))],"has_next_page":false}"#)],
+            "get_session_attachments": [.json(#"[{"attachment_id":"\#(Self.attachmentID)","name":"../notes.txt","url":"https://app.devin.ai/attachments/\#(Self.attachmentID)/notes.txt","source":"devin"}]"#)],
+        ])
+        let kick = try DevinKick.scripted(transport, environment: ["KICK_SERVER_URL": "https://\(api)"])
+        let saved = try await kick.save(Self.sessionID)
+
+        #expect(saved.reading.outcome == .settled(.done(detail: "waiting_for_user")))
+        let names = Set(saved.files.map { $0.path.replacingOccurrences(of: saved.run.directory.path + "/", with: "") })
+        #expect(names == ["session.json", "result.json", "messages.json", "attachments/notes.txt"])
+        #expect(try Data(contentsOf: saved.run.directory.appending(path: "attachments/notes.txt")) == Data("attachment bytes".utf8))
+        let result = try JSONSerialization.jsonObject(with: Data(contentsOf: saved.run.directory.appending(path: "result.json"))) as? [String: Any]
+        #expect(result?["kick_final"] as? Bool == true)
+
+        let first = try #require(RedirectingURLProtocol.requests(to: api).first)
+        // The server's name travels as one segment, its `/` encoded.
+        #expect(first.url?.absoluteString == "https://\(api)/v3/organizations/org-test/attachments/\(Self.attachmentID)/..%2Fnotes.txt")
+        #expect(first.value(forHTTPHeaderField: "Authorization") == "Bearer cog_test")
+        let hop = try #require(RedirectingURLProtocol.requests(to: presigned).first)
+        #expect(hop.value(forHTTPHeaderField: "Authorization") == nil)
+
+        // The foreign session is now a run: created, then settled, the rename recorded.
+        let run = try #require(await kick.store.lookup(Self.sessionID))
+        #expect(run.resumable == nil)
+        #expect(run.lastSettlement == "done")
+        let index = try String(contentsOf: kick.store.indexURL, encoding: .utf8)
+        #expect(index.contains(#""renamed":{"../notes.txt":"notes.txt"}"#))
+    }
+
+    @Test func saveRecreatesADeletedRunDirectory() async throws {
+        let transport = ScriptedTransport([
+            "get_session": [.json(Fixture.session(id: Self.sessionID))],
+            "get_session_messages": [.json(#"{"items":[],"has_next_page":false}"#)],
+            "get_session_attachments": [.json("[]")],
+        ])
+        let kick = try DevinKick.scripted(transport)
+        let first = try await kick.save(Self.sessionID)
+        try FileManager.default.removeItem(at: first.run.directory)
+        let second = try await kick.save(first.run.runID)
+        #expect(second.run.directory == first.run.directory)
+        #expect(FileManager.default.fileExists(atPath: first.run.directory.appending(path: "session.json").path))
+    }
+
+    /// The listing or a download can fail: the rest is saved, and the failure only warns.
+    @Test func aFailedAttachmentListingOnlyWarns() async throws {
+        let transport = ScriptedTransport([
+            "get_session": [.json(Fixture.session(id: Self.sessionID))],
+            "get_session_messages": [.json(#"{"items":[],"has_next_page":false}"#)],
+            "get_session_attachments": [.response(status: 403, body: Fixture.problem(status: 403, detail: "forbidden"))],
+        ])
+        let warnings = WarningLog()
+        let saved = try await DevinKick.scripted(transport, warnings: warnings).save(Self.sessionID)
+        #expect(saved.files.count == 2)
+        #expect(warnings.all.count == 1)
+    }
+
+    @Test func aRunWithoutASessionCannotBeSaved() async throws {
+        let kick = try DevinKick.scripted(ScriptedTransport([:]))
+        let orphan = RunState(runID: "20261018-120000-0001", directory: temporaryDirectory(), mode: nil, title: nil, tags: [], resumable: true)
+        try await kick.store.append(IndexEvent(.requested, run: orphan))
+        await #expect { try await kick.save(orphan.runID) } throws: { ($0 as? KickError)?.exitCode == 64 }
+    }
+}

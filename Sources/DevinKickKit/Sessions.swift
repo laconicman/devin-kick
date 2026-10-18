@@ -52,6 +52,16 @@ extension DevinKick {
         })
     }
 
+    /// The session id `argument` (a session id, run id or run directory) names: a usage error
+    /// for a run that has no session.
+    public func sessionID(of argument: String) async throws(KickError) -> String {
+        let run = await store.lookup(argument)
+        guard let sessionID = run?.sessionID ?? (run == nil ? argument : nil) else {
+            throw .usage("Run \(argument) has no session: \(run?.failure ?? "its create's answer was lost, and no session carries its run tag yet").")
+        }
+        return sessionID
+    }
+
     /// Reads where `argument` (a session id, run id or run directory) stands.
     public func observe(_ argument: String) async -> Reading {
         let run = await store.lookup(argument)
@@ -114,7 +124,9 @@ extension DevinKick {
                 ).ok.body.json
             }
             sessions += page.items.map(SessionSnapshot.init)
-            cursor = page.hasNextPage == true ? page.endCursor : nil
+            // A cursor that doesn't move would loop forever: stop there.
+            let next = page.hasNextPage == true ? page.endCursor : nil
+            cursor = next == cursor ? nil : next
         } while cursor != nil && limit.map { sessions.count < $0 } ?? true
         return sessions
     }

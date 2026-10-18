@@ -17,7 +17,10 @@ struct KickCommand: AsyncParsableCommand {
         \(ExitStatus.help)
         """,
         version: DevinKick.version,
-        subcommands: [WhoAmI.self, UploadCommand.self, StartCommand.self, StatusCommand.self, WaitCommand.self]
+        subcommands: [
+            WhoAmI.self, UploadCommand.self, StartCommand.self, StatusCommand.self, WaitCommand.self,
+            MessagesCommand.self, SaveCommand.self,
+        ]
     )
 }
 

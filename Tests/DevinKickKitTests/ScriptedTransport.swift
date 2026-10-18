@@ -119,7 +119,10 @@ extension DevinKick {
             ["DEVIN_API_KEY": "cog_test", "DEVIN_ORG_ID": "org-test", "KICK_STORE": temporaryDirectory().path]
                 .merging(environment) { $1 }
         )
-        return DevinKick(configuration: configuration, transport: transport, timing: sleeps.timing, warn: warnings.sink)
+        return DevinKick(
+            configuration: configuration, transport: transport, timing: sleeps.timing, warn: warnings.sink,
+            downloadConfiguration: RedirectingURLProtocol.configuration
+        )
     }
 }
 
