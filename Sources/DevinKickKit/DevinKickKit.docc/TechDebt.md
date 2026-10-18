@@ -70,6 +70,22 @@ needed (PR #1 review, r4306484713). Two cases remain:
 - A live check records what an asking session's output looks like, and what a terminated one's
   does.
 
+### TD-5 — CI's swift.org toolchain trial — *discharged*
+
+Tracked in [#7](https://github.com/laconicman/devin-kick/issues/7).
+
+CI first ran on `macos-26` with a swift.org 6.4 toolchain from `swift-actions/setup-swift@v2`,
+because `macos-26` tops out at Xcode 26.6. The first run failed at setup with
+`Version "6.4" is not available`. The action installs from a version table in its own bundle,
+its latest release (2.4.0) predates Swift 6.4, and its fix (swift-actions/setup-swift#806) is
+unreviewed.
+
+**Cost:** PR #1's CI was red before it built anything.
+
+**Discharge:** done in PR #1. GitHub ships Xcode 27 as a separate image, `xcode-27`, generally
+available since 2026-10-15, whose default Xcode 27.0 (27A266a) is the local build. CI runs there
+on the image's own toolchain, with no setup step.
+
 ## See Also
 
 - <doc:Design>
