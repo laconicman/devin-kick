@@ -105,6 +105,23 @@ struct SaveTests {
         #expect(index.contains(#""renamed":{"../notes.txt":"notes.txt"}"#))
     }
 
+    /// A save without output removes an earlier result.json rather than leaving it to read as
+    /// the current result (PR #11 review, r4308714874).
+    @Test func aSaveWithoutOutputRemovesTheStaleResult() async throws {
+        let transport = ScriptedTransport([
+            "get_session": [.json(Fixture.session(id: Self.sessionID, detail: "waiting_for_user", output: Self.finalOutput)),
+                            .json(Fixture.session(id: Self.sessionID, detail: "working"))],
+            "get_session_messages": [.json(#"{"items":[],"has_next_page":false}"#)],
+            "get_session_attachments": [.json("[]")],
+        ])
+        let kick = try DevinKick.scripted(transport)
+        let first = try await kick.save(Self.sessionID)
+        let result = first.run.directory.appending(path: "result.json")
+        #expect(FileManager.default.fileExists(atPath: result.path))
+        _ = try await kick.save(first.run.runID)
+        #expect(!FileManager.default.fileExists(atPath: result.path))
+    }
+
     @Test func saveRecreatesADeletedRunDirectory() async throws {
         let transport = ScriptedTransport([
             "get_session": [.json(Fixture.session(id: Self.sessionID))],

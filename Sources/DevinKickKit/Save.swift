@@ -32,6 +32,10 @@ extension DevinKick {
         if let output = session.structuredOutput {
             let pretty = (try? JSONSerialization.data(withJSONObject: JSONSerialization.jsonObject(with: output), options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes])) ?? output
             await write(pretty, "result.json")
+        } else {
+            // No output now: an earlier save's result.json would read as this snapshot's result
+            // (PR #11 review, r4308714874), so it goes.
+            await store.removeDerived(run.directory.appending(path: "result.json"))
         }
         do throws(KickError) {
             let messages = try await messages(sessionID)

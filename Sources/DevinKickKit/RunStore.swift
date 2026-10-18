@@ -142,6 +142,16 @@ public actor RunStore {
         }
     }
 
+    /// Removes a derived file that no longer describes the session, warning on failure.
+    func removeDerived(_ url: URL) {
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        do {
+            try FileManager.default.removeItem(at: url)
+        } catch {
+            warn("couldn't remove the stale \(url.path) (\(error.localizedDescription)); it describes an earlier save.")
+        }
+    }
+
     // MARK: - Index
 
     /// Appends `event` to the index as one line, in one `write(2)`, and folds it into the map.
