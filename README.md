@@ -1,6 +1,8 @@
 # devin-kick
 
+[![CI](https://github.com/laconicman/devin-kick/actions/workflows/ci.yml/badge.svg)](https://github.com/laconicman/devin-kick/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache_2.0-blue.svg)](LICENSE.txt)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/laconicman/devin-kick)
 
 Devin (Cognition) as a **side kick** or a **main kick**, from Swift. It is one binary, `kick`,
 with a CLI and (from milestone M2) an MCP stdio server, `kick serve`. Both wrap the same library,
@@ -23,7 +25,7 @@ next.
 
 ## Build and try
 
-Needs Swift 6.4 (Xcode 26.4 or a swift.org toolchain) on macOS 15 or later.
+Needs Swift 6.4 (Xcode 27, or a swift.org 6.4 toolchain) on macOS 15 or later.
 
 ```bash
 swift build

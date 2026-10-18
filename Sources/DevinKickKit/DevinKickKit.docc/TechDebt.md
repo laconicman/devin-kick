@@ -10,6 +10,8 @@ upstream ones are in the repository's `Upstream/` folder.
 
 ### TD-1 — warnings in the generated sources — *open*
 
+Tracked in [#5](https://github.com/laconicman/devin-kick/issues/5).
+
 swift-openapi-generator 1.14.1 under Swift 6.4 writes `public import Foundation` and
 `public import OpenAPIRuntime` into generated files that don't use them publicly. That gives
 about 30 `UnusedImportAccess` warnings per clean build. SwiftPM 6.4 can't silence them:
@@ -23,6 +25,8 @@ PR #947 (fixing #946; #968 was its duplicate), then hold the generated target to
 
 ### TD-2 — generator emits code for a parameter it skipped — *open (upstream)*
 
+Tracked in [#3](https://github.com/laconicman/devin-kick/issues/3).
+
 A path parameter whose schema the generator skips as unsupported (a nullable `anyOf`) still
 appears as `input.path.<name>` in `Client.swift`, a compile error in generated code instead of a
 generation-time diagnostic. Reproduced with a one-operation document on 1.14.1.
@@ -35,6 +39,8 @@ transform stays (TD-3), but a regression would fail clearly.
 
 ### TD-3 — Devin's document types path parameters as nullable — *open (upstream)*
 
+Tracked in [#4](https://github.com/laconicman/devin-kick/issues/4).
+
 Every path parameter is `anyOf: [{type: string}, {type: null}]` with `required: true`, FastAPI's
 rendering of `Optional[str]`. Transform 1 of `devin-spec-tool` rewrites it.
 
@@ -44,6 +50,8 @@ rendering of `Optional[str]`. Transform 1 of `devin-spec-tool` rewrites it.
 the transform reports 0 for parameters and can be narrowed to response fields.
 
 ### TD-4 — output is not proof of completion — *open*
+
+Tracked in [#2](https://github.com/laconicman/devin-kick/issues/2).
 
 `structured_output` can be set while a session still works. Field use on 2026-10-14 saw partial
 output inlined for sessions in `working`. Settlement therefore trusts output only where Devin
