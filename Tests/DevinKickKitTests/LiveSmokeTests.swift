@@ -25,7 +25,7 @@ struct LiveSmokeTests {
     @Test func sessionsFilterByTagThroughTheQsObject() async throws {
         let tag = ProcessInfo.processInfo.environment["KICK_LIVE_TAG"] ?? "devin-kick"
         let output = try await kick.client.getSessions(
-            path: .init(orgId: kick.configuration.orgID),
+            path: .init(orgId: try kick.configuration.requireOrgID()),
             query: .init(qs: .init(first: 5, tags: [tag]))
         )
         let page = try output.ok.body.json

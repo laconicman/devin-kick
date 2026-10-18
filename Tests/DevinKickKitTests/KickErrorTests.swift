@@ -24,16 +24,37 @@ struct KickErrorTests {
         #expect(throws: KickError.self) {
             try Configuration.fromEnvironment(["DEVIN_API_KEY": "", "DEVIN_ORG_ID": "org-1"])
         }
-        #expect(throws: KickError.self) {
-            try Configuration.fromEnvironment(["DEVIN_API_KEY": "cog_x"])
-        }
+    }
+
+    /// `GET /v3/self` takes no organization, so a key alone is a valid configuration; the
+    /// organization is demanded only where it is used (PR #1 review, r4306484532).
+    @Test func aKeyAloneIsEnoughUntilAnOrganizationIsNeeded() throws {
+        let configuration = try Configuration.fromEnvironment(["DEVIN_API_KEY": "cog_x"])
+        #expect(configuration.orgID == nil)
+        #expect(throws: KickError.self) { try configuration.requireOrgID() }
     }
 
     @Test func environmentIsRead() throws {
         let configuration = try Configuration.fromEnvironment([
             "DEVIN_API_KEY": "cog_x", "DEVIN_ORG_ID": "org-1", "KICK_SERVER_URL": "https://example.test",
         ])
-        #expect(configuration.orgID == "org-1")
+        #expect(try configuration.requireOrgID() == "org-1")
         #expect(configuration.serverURL.absoluteString == "https://example.test")
+    }
+
+    /// A relative or clear-text override is a configuration error, not a transport error later,
+    /// and the key never goes out over plain http except to loopback (PR #1 review, r4306484578,
+    /// r4306484751).
+    @Test(arguments: ["devin", "/v3", "http://api.devin.ai", "ftp://api.devin.ai", "https://"])
+    func unsafeOrRelativeServerURLsAreRejected(_ override: String) {
+        #expect(throws: KickError.self) {
+            try Configuration.fromEnvironment(["DEVIN_API_KEY": "cog_x", "KICK_SERVER_URL": override])
+        }
+    }
+
+    @Test(arguments: ["https://api.devin.ai", "http://localhost:8080", "http://127.0.0.1:9000"])
+    func secureOrLoopbackServerURLsAreAccepted(_ override: String) throws {
+        let configuration = try Configuration.fromEnvironment(["DEVIN_API_KEY": "cog_x", "KICK_SERVER_URL": override])
+        #expect(configuration.serverURL.absoluteString == override)
     }
 }
