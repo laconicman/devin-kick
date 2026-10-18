@@ -69,21 +69,46 @@ struct ReplyArchiveListTests {
     }
 
     /// `--terminate` is one `DELETE …?archive=true`, not a terminate and an archive, and the
-    /// session is read again: live, an early terminate answered 200 and didn't end it.
-    @Test(arguments: ["exit", "running"])
-    func terminateIsOneDeleteThatArchivesThenARead(_ after: String) async throws {
+    /// session is read back until `exit`: live, a terminate settled through `running/finished`
+    /// in about 4 s, and an early one answered 200 and never ended the session.
+    @Test(arguments: [("exit", 2), ("running", 6)])
+    func terminateIsOneDeleteThatArchivesThenReadsBack(_ after: String, reads: Int) async throws {
         let transport = ScriptedTransport([
             "terminate_session": [.json(Fixture.session(id: Self.sessionID, status: "running", detail: "working"))],
-            "get_session": [.json(Fixture.session(id: Self.sessionID, status: after, detail: nil))],
+            "get_session": [.json(Fixture.session(id: Self.sessionID, status: "running", detail: "finished")),
+                            .json(Fixture.session(id: Self.sessionID, status: after, detail: nil))],
         ])
         let kick = try await Self.kick(transport)
         let session = try await kick.archive(Self.sessionID, terminate: true)
         #expect(session.status == after)
+        // Read until exit, or for the 15 s settle at 3 s apart: 1 + 5 reads.
+        #expect(await transport.count("get_session") == reads)
         let request = try #require(await transport.sent.first?.request)
         #expect(request.method == .delete)
         #expect(request.path?.hasSuffix("/sessions/\(Self.sessionID)?archive=true") == true)
         #expect(await transport.count("archive_session") == 0)
         #expect(await kick.store.lookup(Self.runID)?.archived == true)
+    }
+
+    /// Live, a terminate of an exited session answers 400: kick reads the session, and archives
+    /// one that has exited instead of failing; a 400 on a live session still fails.
+    @Test(arguments: [("exit", true), ("running", false)])
+    func aRepeatedTerminateOfAnExitedSessionArchivesIt(_ status: String, succeeds: Bool) async throws {
+        let transport = ScriptedTransport([
+            "terminate_session": [.response(status: 400, body: Fixture.problem(status: 400, detail: "Devin session already exited"))],
+            "get_session": [.json(Fixture.session(id: Self.sessionID, status: status, detail: nil))],
+            "archive_session": [.json(Fixture.session(id: Self.sessionID, status: status, detail: nil))],
+        ])
+        let kick = try await Self.kick(transport)
+        if succeeds {
+            #expect(try await kick.archive(Self.sessionID, terminate: true).status == "exit")
+            #expect(await transport.count("archive_session") == 1)
+        } else {
+            await #expect(throws: KickError.server(status: 400, code: nil, detail: "Devin session already exited")) {
+                try await kick.archive(Self.sessionID, terminate: true)
+            }
+            #expect(await transport.count("archive_session") == 0)
+        }
     }
 
     @Test func listReadsTheLocalIndexByTag() async throws {

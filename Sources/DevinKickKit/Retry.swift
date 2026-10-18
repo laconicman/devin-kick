@@ -63,7 +63,9 @@ struct RetryPolicy: Sendable {
 /// Which failures an operation may retry, by operation id (Design: "Retries by idempotency").
 enum RetryClass: Sendable, Equatable {
     /// Every GET, archive, unarchive, the tag PUT and terminate (a DELETE): repeating one
-    /// changes nothing, so transport errors, 429 and 5xx all retry.
+    /// changes nothing, so transport errors, 429 and 5xx all retry. A repeated terminate is
+    /// answered 400 once the session has exited; ``DevinKick/archive(_:terminate:)`` reads that
+    /// as done.
     case idempotent
     /// Session create, message post, upload and the tag POST: a repeat could act twice. Only a
     /// 429 (the request wasn't processed) and an error where the request provably never left

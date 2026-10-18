@@ -106,6 +106,9 @@ struct Timing: Sendable {
     var createSettle: Duration = .seconds(15)
     /// The pacing of `wait` and `run`.
     var polling = PollingPolicy()
+    /// How long a terminate is read back for `exit`, and how often (``DevinKick/archive(_:terminate:)``).
+    var terminateSettle: Duration = .seconds(15)
+    var terminatePoll: Duration = .seconds(3)
     var sleep: @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
     /// The clock deadlines are measured on; tests advance it as they "sleep".
     var now: @Sendable () -> ContinuousClock.Instant = { .now }

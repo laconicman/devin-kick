@@ -194,22 +194,42 @@ extension DevinKick {
     /// returns the session as read afterwards.
     ///
     /// Both answers carry the status from before the call, so the session is read again. That
-    /// read is also the only proof of a terminate: live (2026-10-18), one sent a second after
-    /// create answered 200, archived the session and didn't end it.
+    /// read is also the only proof of a terminate, which settles asynchronously: live
+    /// (2026-10-18) a session passed through `running/finished` and read `exit` about 4 s
+    /// later, while one terminate sent a second after create answered 200, archived the session
+    /// and never ended it. So a terminate is read back until `exit`, for up to
+    /// ``Timing/terminateSettle``.
     public func archive(_ argument: String, terminate: Bool = false) async throws(KickError) -> SessionSnapshot {
         let sessionID = try await sessionID(of: argument)
         let orgID = try configuration.requireOrgID()
-        if terminate {
-            _ = try await call(Operations.TerminateSession.id) {
-                try await client.terminateSession(path: .init(orgId: orgID, devinId: sessionID), query: .init(archive: true)).ok.body.json
-            }
-        } else {
+        func archiveOnly() async throws(KickError) {
             _ = try await call(Operations.ArchiveSession.id) {
                 try await client.archiveSession(path: .init(orgId: orgID, devinId: sessionID)).ok.body.json
             }
         }
+        if terminate {
+            do throws(KickError) {
+                _ = try await call(Operations.TerminateSession.id) {
+                    try await client.terminateSession(path: .init(orgId: orgID, devinId: sessionID), query: .init(archive: true)).ok.body.json
+                }
+            } catch {
+                // Live, a terminate of a session that has exited answers 400 ("already
+                // exited"). So a repeat (a person's, or a retry after a lost answer) reads the
+                // session before failing, and only archives one that has ended.
+                guard case .server(400, _, _) = error, try await session(sessionID).status == "exit" else { throw error }
+                try await archiveOnly()
+            }
+        } else {
+            try await archiveOnly()
+        }
         try await record(.archived, for: argument)
-        return try await session(sessionID)
+        var session = try await session(sessionID)
+        let deadline = timing.now() + timing.terminateSettle
+        while terminate, session.status != "exit", timing.now() < deadline {
+            try? await timing.sleep(timing.terminatePoll)
+            session = try await self.session(sessionID)
+        }
+        return session
     }
 
     /// Unarchives the session `argument` names. Records `unarchived`.
