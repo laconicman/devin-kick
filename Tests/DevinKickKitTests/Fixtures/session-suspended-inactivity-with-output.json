@@ -1,0 +1,35 @@
+{
+  "session_id": "00000000000000000000000000000002",
+  "url": "https://app.devin.ai/sessions/00000000000000000000000000000002",
+  "status": "suspended",
+  "title": "[fixture] session-suspended-inactivity-with-output",
+  "tags": [
+    "fixture"
+  ],
+  "playbook_id": null,
+  "user_id": "github|0",
+  "org_id": "org-00000000000000000000000000000000",
+  "created_at": 1791972626,
+  "updated_at": 1791977575,
+  "is_archived": false,
+  "acus_consumed": 0.0,
+  "pull_requests": [],
+  "parent_session_id": null,
+  "child_session_ids": [],
+  "service_user_id": null,
+  "category": "research_and_exploration",
+  "subcategory": "Other",
+  "origin": "api",
+  "automation_id": null,
+  "structured_output": {
+    "answer_md": "fixture",
+    "doubts": [],
+    "questions_for_user": []
+  },
+  "devin_mode": "swe-2-max",
+  "status_detail": "inactivity",
+  "security_profile": {
+    "selection": "inherit",
+    "profile_id": null
+  }
+}
