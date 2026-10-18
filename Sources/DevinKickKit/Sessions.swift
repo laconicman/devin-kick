@@ -259,7 +259,7 @@ extension DevinKick {
         }
     }
 
-    /// The server's sessions, newest first as it lists them, optionally only those tagged `tag`.
+    /// The server's sessions, in the order it lists them, optionally only those tagged `tag`.
     public func observeRemote(tagged tag: String?, limit: Int) async throws(KickError) -> [Reading] {
         var readings: [Reading] = []
         for session in try await listSessions(tags: tag.map { [$0] }, limit: limit) {

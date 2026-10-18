@@ -211,8 +211,9 @@ public actor RunStore {
     public func lookup(_ argument: String) -> RunState? {
         let runs = runs()
         if let run = runs[argument] { return run }
-        let path = URL(fileURLWithPath: argument).standardizedFileURL.path
-        return runs.values.first { $0.sessionID == argument || $0.directory.standardizedFileURL.path == path }
+        // Symlinks resolved on both sides, so `/tmp/…` finds a run recorded as `/private/tmp/…`.
+        let path = URL(fileURLWithPath: argument).resolvingSymlinksInPath().path
+        return runs.values.first { $0.sessionID == argument || $0.directory.resolvingSymlinksInPath().path == path }
     }
 
     /// Every run whose tags include `tag`, newest first.

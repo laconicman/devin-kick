@@ -44,6 +44,11 @@ struct RunStoreTests {
         #expect(reopened.lastSettlement == "done")
         #expect(reopened.tags == ["kick", "kick-run-\(runID)"])
         #expect(await RunStore(root: root).lookup(directory.path)?.runID == runID)
+        // The same directory named through a symlink.
+        let alias = root.deletingLastPathComponent().appending(path: "alias-\(UUID().uuidString)")
+        try FileManager.default.createSymbolicLink(at: alias, withDestinationURL: root)
+        let aliased = alias.appending(path: directory.path.replacingOccurrences(of: root.path + "/", with: "")).path
+        #expect(await RunStore(root: root).lookup(aliased)?.runID == runID)
         #expect(await RunStore(root: root).runs(tagged: "kick-run-\(runID)").count == 1)
         #expect(await RunStore(root: root).runs(tagged: "other").isEmpty)
     }
