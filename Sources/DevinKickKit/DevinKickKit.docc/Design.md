@@ -65,9 +65,13 @@ the field:
 - **A finished session left idle sleeps (`suspended`/`inactivity`) with its output intact,** so
   that counts as done.
 - **`waiting_for_approval` is input needed,** even when output exists.
+- **Output counts as the result only where Devin stopped by itself.** A session can report output
+  while still working, so `exit` with output is `unknown` (it may have been interrupted), and a
+  session a person paused (`suspended`/`user_request`) is input needed (<doc:TechDebt> TD-4).
 - **A billing or quota suspension is a failure.**
 - **Anything outside the vocabulary of the vendored spec is `unknown`, shown raw,** never guessed
-  as working.
+  as working. That includes a detail on a status the vocabulary gives none (`new`, `claimed`,
+  `resuming`, `exit`).
 
 Each case has an exit status that `kick --help` documents: 0 done, 10 needs input, 11 unknown,
 75 working, 1 failed.
@@ -80,6 +84,11 @@ lifecycle; Devin's has one.
 A session started without a `schema_file` gets a default one:
 `{answer_md, doubts, questions_for_user}`. Then "waiting with output" always means done, and
 "waiting without output" always means Devin is asking (owner's decision, 2026-10-18).
+
+`schema_file` is kick's own input: a path to a JSON Schema file, on the CLI and on the side
+profile's `kick_start`. The Kit reads it and sends its content as the API's
+`structured_output_schema`. It leaves `structured_output_required` at the server's default,
+`true`.
 
 *Rejected:* `structured_output_required: false`. A session that is really asking would look
 finished, unless its last message were parsed.

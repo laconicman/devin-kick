@@ -43,6 +43,25 @@ rendering of `Optional[str]`. Transform 1 of `devin-spec-tool` rewrites it.
 **Discharge:** send `Upstream/devin-nullable-path-parameters.md`. When the document is fixed,
 the transform reports 0 for parameters and can be narrowed to response fields.
 
+### TD-4 — output is not proof of completion — *open*
+
+`structured_output` can be set while a session still works. Field use on 2026-10-14 saw partial
+output inlined for sessions in `working`. Settlement therefore trusts output only where Devin
+stopped by itself, and reports `exit` with output as `unknown` and a person's pause as input
+needed (PR #1 review, r4306484713). Two cases remain:
+- a session that reports output and then asks a question reads as done;
+- whether Devin, with `structured_output_required: true`, provides output before asking is
+  unobserved.
+
+**Cost:** with a custom schema, "waiting with output" can be a question rather than a result. And
+`kick` can't tell an interrupted session's partial output from a final one.
+
+**Discharge (M1):**
+- kick adds its own completion field to every schema it sends, and Settlement reads it. With the
+  default schema, a non-empty `questions_for_user` also means input needed.
+- A live check records what an asking session's output looks like, and what a terminated one's
+  does.
+
 ## See Also
 
 - <doc:Design>
