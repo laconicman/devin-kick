@@ -22,11 +22,16 @@ struct ArchiveCommand: AsyncParsableCommand {
         try await eachSession(ids) { (kick, id) async throws(KickError) in
             let session = try await kick.archive(id, terminate: terminate)
             let state = session.status + (session.statusDetail.map { "/\($0)" } ?? "")
-            guard terminate, session.status != "exit" else {
-                return "\(session.id)  \(terminate ? "terminated and archived" : "archived")  \(state)"
+            switch (terminate, session.status) {
+            case (false, _): return "\(session.id)  archived  \(state)"
+            case (true, "exit"): return "\(session.id)  terminated and archived  \(state)"
+            case (true, "suspended"):
+                // A terminate leaves a sleeping session asleep; archived, it is as good as ended.
+                return "\(session.id)  archived, asleep (a terminate doesn't end a sleeping session)  \(state)"
+            case (true, _):
+                printError("\(session.id): the terminate was answered, but the session still reads \(state); terminate it again to stop it.")
+                return "\(session.id)  archived, not terminated  \(state)"
             }
-            printError("\(session.id): the terminate was answered, but the session still reads \(state); terminate it again to stop it.")
-            return "\(session.id)  archived, not terminated  \(state)"
         }
     }
 }

@@ -71,7 +71,7 @@ struct ReplyArchiveListTests {
     /// `--terminate` is one `DELETE …?archive=true`, not a terminate and an archive, and the
     /// session is read back until `exit`: live, a terminate settled through `running/finished`
     /// in about 4 s, and an early one answered 200 and never ended the session.
-    @Test(arguments: [("exit", 2), ("running", 6)])
+    @Test(arguments: [("exit", 2), ("running", 6), ("suspended", 2)])
     func terminateIsOneDeleteThatArchivesThenReadsBack(_ after: String, reads: Int) async throws {
         let transport = ScriptedTransport([
             "terminate_session": [.json(Fixture.session(id: Self.sessionID, status: "running", detail: "working"))],
@@ -81,7 +81,8 @@ struct ReplyArchiveListTests {
         let kick = try await Self.kick(transport)
         let session = try await kick.archive(Self.sessionID, terminate: true)
         #expect(session.status == after)
-        // Read until exit, or for the 15 s settle at 3 s apart: 1 + 5 reads.
+        // Read until exit (or asleep, which a terminate doesn't change), or for the 15 s
+        // settle at 3 s apart: 1 + 5 reads.
         #expect(await transport.count("get_session") == reads)
         let request = try #require(await transport.sent.first?.request)
         #expect(request.method == .delete)
