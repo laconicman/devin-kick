@@ -24,7 +24,8 @@ import Yams
 ///     reachable from a response, in transform 2's walk, so a field Devin adds later can't fail
 ///     decoding either: the generator enforces it (`ensureNoAdditionalProperties`), and live
 ///     (2026-10-18) the automation schemas carried two fields the document doesn't list (TD-8).
-///     Request-side schemas stay closed.
+///     A schema used only in requests stays closed; one shared with a response opens, which
+///     changes nothing for a request, since the generator emits no encoder check for it.
 ///
 /// All four are idempotent: a second run over the output reports `0 / 0 / 0 / 0 / 0`.
 @main

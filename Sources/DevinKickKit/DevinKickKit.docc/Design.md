@@ -26,13 +26,14 @@ generated is committed. The document is FastAPI's output and does not generate a
    (<doc:TechDebt> TD-2, TD-3).
 2. `enum` is dropped from every schema reachable from a response, so a status, detail or mode
    Devin adds later can't fail decoding. The generator's string enums are closed, with no catch-all
-   case. Request-side enums stay.
+   case. Request-side enums stay, and a nullable enum keeps its `"null"` from transform 1.
 3. `handle_create_session_v3_…_post` → `create_session`, so the façade reads `createSession`.
 4. `additionalProperties: false` is dropped from every schema reachable from a response, in
    transform 2's walk, so a field Devin adds later can't fail decoding either: the generator
    enforces a closed object (`ensureNoAdditionalProperties`), and live the automation schemas
-   carried two fields the document doesn't list (<doc:TechDebt> TD-8). It opens 50 schemas;
-   request-side schemas stay closed.
+   carried two fields the document doesn't list (<doc:TechDebt> TD-8). It opens 50 schemas. A
+   schema used only in requests stays closed; one shared with a response opens (33 of the 50),
+   which changes nothing for a request, since the generator emits no encoder check for it.
 
 The tool stamps the source URL, the raw document's sha256 and the date under `info.x-devin-kick`.
 A field made optional encodes with `encodeIfPresent`, so it is omitted, never sent as `null`.
