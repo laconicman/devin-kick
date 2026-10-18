@@ -67,13 +67,18 @@ extension DevinKick {
         while base.hasPrefix(".") { base.removeFirst() }
         if base.isEmpty { base = "attachment" }
         let ext = (base as NSString).pathExtension
-        var stem = ext.isEmpty ? base : String(base.dropLast(ext.count + 1))
+        let stem = ext.isEmpty ? base : String(base.dropLast(ext.count + 1))
         let suffix = ext.isEmpty ? "" : ".\(ext)"
-        while (stem + suffix).utf8.count > maximumNameBytes, !stem.isEmpty { stem.removeLast() }
-        var candidate = stem + suffix
+        /// The stem cut to fit the cap together with `tail` (a number, when the name is taken).
+        func fitted(_ tail: String) -> String {
+            var stem = stem
+            while (stem + tail + suffix).utf8.count > maximumNameBytes, !stem.isEmpty { stem.removeLast() }
+            return stem + tail + suffix
+        }
+        var candidate = fitted("")
         var number = 2
         while taken.contains(candidate) {
-            candidate = "\(stem)-\(number)\(suffix)"
+            candidate = fitted("-\(number)")
             number += 1
         }
         return candidate
@@ -115,7 +120,12 @@ extension DevinKick {
                 let problem = ProblemMiddleware.problem(status: status, body: body)
                 let error = KickError.server(status: problem.status, code: problem.code, detail: problem.detail)
                 guard RetryClass.idempotent.retries(status: status), retry < timing.retry.maxRetries else { throw error }
-                delay = timing.retry.backoff(retry: retry + 1)
+                let header = (response as? HTTPURLResponse)?.value(forHTTPHeaderField: "Retry-After")
+                switch timing.retry.retryAfter(value: header) {
+                case .absent: delay = timing.retry.backoff(retry: retry + 1)
+                case .wait(let requested): delay = requested
+                case .tooLong: throw error
+                }
             } catch let error as KickError {
                 throw error
             } catch let error as URLError where error.code != .cancelled && retry < timing.retry.maxRetries {
@@ -132,6 +142,9 @@ extension DevinKick {
     static func pathSegment(_ text: String) -> String {
         var allowed = CharacterSet.urlPathAllowed
         allowed.remove(charactersIn: "/")
+        // A segment of dots alone (`.`, `..`) is a dot-segment whatever else is encoded, so its
+        // dots are encoded too (RFC 3986 §3.3).
+        if !text.isEmpty, text.allSatisfy({ $0 == "." }) { allowed.remove(charactersIn: ".") }
         return text.addingPercentEncoding(withAllowedCharacters: allowed) ?? text
     }
 

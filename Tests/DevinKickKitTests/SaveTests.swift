@@ -50,9 +50,20 @@ struct SaveTests {
     }
 
     @Test func aLongNameKeepsItsExtensionWithinTheCap() {
-        let name = DevinKick.safeName(String(repeating: "я", count: 300) + ".tar.gz", taken: [])
+        let long = String(repeating: "я", count: 300) + ".tar.gz"
+        let name = DevinKick.safeName(long, taken: [])
         #expect(name.utf8.count <= DevinKick.maximumNameBytes)
         #expect(name.hasSuffix(".gz"))
+        // Numbered because taken, it still fits (from the 2026-10-18 diff review through kick).
+        let numbered = DevinKick.safeName(long, taken: [name])
+        #expect(numbered != name && numbered.hasSuffix("-2.gz"))
+        #expect(numbered.utf8.count <= DevinKick.maximumNameBytes)
+    }
+
+    /// A name of dots alone would be a dot-segment; its dots are encoded too.
+    @Test(arguments: [("..", "%2E%2E"), (".", "%2E"), ("../x", "..%2Fx"), ("a.b c", "a.b%20c")])
+    func namesTravelAsOneSegment(_ name: String, encoded: String) {
+        #expect(DevinKick.pathSegment(name) == encoded)
     }
 
     /// A session kick didn't start: save adopts it as a run, writes every file, and the

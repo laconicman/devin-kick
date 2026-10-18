@@ -35,9 +35,13 @@ struct RetryPolicy: Sendable {
 
     /// The server's `Retry-After`, in delta-seconds or as an HTTP date (RFC 9110 §10.2.3).
     func retryAfter(_ response: HTTPResponse, now: Date = Date()) -> RetryAfter {
-        guard let value = response.headerFields[.retryAfter]?.trimmingCharacters(in: .whitespaces) else {
-            return .absent
-        }
+        retryAfter(value: response.headerFields[.retryAfter], now: now)
+    }
+
+    /// The same, from the header's raw value (the attachment download reads it from an
+    /// `HTTPURLResponse`).
+    func retryAfter(value: String?, now: Date = Date()) -> RetryAfter {
+        guard let value = value?.trimmingCharacters(in: .whitespaces) else { return .absent }
         let seconds: Double
         if let delta = Int(value) {
             seconds = Double(max(delta, 0))
