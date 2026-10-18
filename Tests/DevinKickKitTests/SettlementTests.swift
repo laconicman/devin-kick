@@ -27,10 +27,13 @@ struct SettlementTests {
         // A finished session left idle sleeps with its output intact: done, not failed.
         .init(status: "suspended", detail: "inactivity", hasOutput: true, expected: "done"),
         .init(status: "suspended", detail: "inactivity", hasOutput: false, expected: "needs-input"),
+        // Paused by a person, maybe mid-work: output may be partial (PR #1 review, r4306484713).
+        .init(status: "suspended", detail: "user_request", hasOutput: true, expected: "needs-input"),
         .init(status: "suspended", detail: "user_request", hasOutput: false, expected: "needs-input"),
         .init(status: "suspended", detail: "out_of_credits", hasOutput: true, expected: "failed"),
         .init(status: "suspended", detail: "contract_expired", hasOutput: false, expected: "failed"),
-        .init(status: "exit", detail: nil, hasOutput: true, expected: "done"),
+        // Ended, maybe interrupted: output can't be told final from partial (r4306484713).
+        .init(status: "exit", detail: nil, hasOutput: true, expected: "unknown"),
         .init(status: "exit", detail: nil, hasOutput: false, expected: "failed"),
         .init(status: "error", detail: nil, hasOutput: false, expected: "failed"),
         .init(status: "new", detail: nil, hasOutput: false, expected: "working"),
@@ -40,6 +43,11 @@ struct SettlementTests {
         .init(status: "running", detail: "thinking_harder", hasOutput: false, expected: "unknown"),
         .init(status: "suspended", detail: "solar_flare", hasOutput: true, expected: "unknown"),
         .init(status: "teleported", detail: nil, hasOutput: true, expected: "unknown"),
+        // A detail where the vocabulary has none (PR #1 review, r4306484630).
+        .init(status: "new", detail: "blocked", hasOutput: false, expected: "unknown"),
+        .init(status: "claimed", detail: "queued_behind_quota", hasOutput: false, expected: "unknown"),
+        .init(status: "resuming", detail: "blocked", hasOutput: false, expected: "unknown"),
+        .init(status: "exit", detail: "terminated_by_admin", hasOutput: true, expected: "unknown"),
     ]
 
     @Test(arguments: cases)

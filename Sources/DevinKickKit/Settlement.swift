@@ -11,7 +11,14 @@
 ///   *without* output always means Devin is asking.
 ///
 /// A status or detail outside the vocabulary of the spec vendored on 2026-10-15 is reported as
-/// ``unknown(status:detail:)`` with its raw values, never guessed as working or done.
+/// ``unknown(status:detail:)`` with its raw values, never guessed as working or done. The spec
+/// populates `status_detail` only under `running` and `suspended`, so a detail on any other
+/// status is outside it too.
+///
+/// **Output is not proof of completion** (<doc:TechDebt> TD-4): a session can report output
+/// while still working. So output reads as done only where Devin stopped by itself
+/// (`waiting_for_user`, `finished`, an idle sleep). A session that was ended (`exit`) or paused
+/// by a person (`suspended`/`user_request`) can hold partial output, and is never called done.
 public enum Settlement: Sendable, Hashable {
     /// Devin is working (or the session is starting or resuming). Poll again later.
     case working(detail: String?)
@@ -22,11 +29,9 @@ public enum Settlement: Sendable, Hashable {
     case done(detail: String?)
     /// The session ended without a result, or a billing/quota limit stopped it.
     case failed(status: String, detail: String?)
-    /// A status or detail this version doesn't know. Shown raw; treat with care.
+    /// A status or detail this version doesn't know, or an end whose outcome it can't tell
+    /// (`exit` with output that may be partial). Shown raw; read it before relying on it.
     case unknown(status: String, detail: String?)
-
-    /// Suspension reasons that a reply can resume (the session is intact).
-    static let resumableSuspensions: Set<String> = ["inactivity", "user_request"]
 
     /// Suspension reasons that are a billing, quota or account limit.
     static let limitSuspensions: Set<String> = [
@@ -38,7 +43,8 @@ public enum Settlement: Sendable, Hashable {
     public init(status: String, detail: String?, hasOutput: Bool) {
         switch status {
         case "new", "claimed", "resuming":
-            self = .working(detail: detail)
+            // These carry no detail in the vocabulary; one that appears is surfaced, not assumed.
+            self = detail == nil ? .working(detail: nil) : .unknown(status: status, detail: detail)
         case "running":
             switch detail {
             case "working", nil:
@@ -55,15 +61,27 @@ public enum Settlement: Sendable, Hashable {
             }
         case "suspended":
             switch detail {
-            case let reason? where Self.resumableSuspensions.contains(reason):
-                self = hasOutput ? .done(detail: reason) : .needsInput(detail: "suspended: \(reason)")
+            case "inactivity":
+                // Devin stopped by itself and then slept: its output is the result.
+                self = hasOutput ? .done(detail: "inactivity") : .needsInput(detail: "suspended: inactivity")
+            case "user_request":
+                // A person paused it, possibly mid-work: a reply resumes it either way.
+                self = .needsInput(detail: "suspended: user_request")
             case let reason? where Self.limitSuspensions.contains(reason):
                 self = .failed(status: status, detail: reason)
             default:
                 self = .unknown(status: status, detail: detail)
             }
         case "exit":
-            self = hasOutput ? .done(detail: detail) : .failed(status: status, detail: detail)
+            switch (detail, hasOutput) {
+            case (nil, false):
+                self = .failed(status: status, detail: "ended without output")
+            case (nil, true):
+                // Ended, possibly interrupted: the output may be partial (TD-4).
+                self = .unknown(status: status, detail: "ended with output; final or partial cannot be told")
+            case (let detail?, _):
+                self = .unknown(status: status, detail: detail)
+            }
         case "error":
             self = .failed(status: status, detail: detail)
         default:
