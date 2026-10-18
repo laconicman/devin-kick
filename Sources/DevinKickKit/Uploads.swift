@@ -2,6 +2,7 @@ import CryptoKit
 import DevinOpenAPI
 public import Foundation
 import OpenAPIRuntime
+import System
 
 /// Uploads are permanent (CLAUDE.md rule 7), so kick uploads only from the directories named in
 /// `KICK_UPLOAD_ROOTS`, and never the same content twice: `uploads.jsonl` in the run store maps
@@ -109,6 +110,17 @@ actor UploadCache {
 }
 
 extension DevinKick {
+    /// The bytes of `url`, opened with `O_NOFOLLOW`, so a symlink put in its place fails.
+    static func readWithoutFollowing(_ url: URL) throws(KickError) -> Data {
+        do {
+            let descriptor = try FileDescriptor.open(FilePath(url.path), .readOnly, options: [.noFollow])
+            let handle = FileHandle(fileDescriptor: descriptor.rawValue, closeOnDealloc: true)
+            return try handle.readToEnd() ?? Data()
+        } catch {
+            throw .usage("Couldn't read \(url.path) (\(error.localizedDescription)); nothing was uploaded.")
+        }
+    }
+
     /// Uploads `paths` (relative ones against `base`), each only if its content and name aren't
     /// in the cache. Every path is checked against `KICK_UPLOAD_ROOTS` before anything is sent.
     public func upload(_ paths: [String], relativeTo base: URL? = nil) async throws(KickError) -> [Upload] {
@@ -128,12 +140,14 @@ extension DevinKick {
     }
 
     func upload(resolved file: URL) async throws(KickError) -> Upload {
-        let data: Data
-        do {
-            data = try Data(contentsOf: file)
-        } catch {
-            throw .usage("Couldn't read \(file.path) (\(error.localizedDescription)).")
+        // Checked again as it is read: a file that became a symlink since `prepare` could point
+        // anywhere, and uploads are permanent (PR #11 review, r4308715320). The read doesn't
+        // follow a symlink either, so a swap between this check and the read fails too.
+        let checked = try UploadRoots(configuration.uploadRoots).resolve(file.path)
+        guard checked.path == file.path else {
+            throw .usage("\(file.path) now resolves to \(checked.path), not the file that was checked; nothing was uploaded.")
         }
+        let data = try Self.readWithoutFollowing(checked)
         let name = file.lastPathComponent
         let sha256 = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         if let entry = await uploads.lookup(sha256: sha256, name: name) {

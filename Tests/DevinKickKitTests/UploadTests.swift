@@ -91,6 +91,24 @@ struct UploadTests {
         }
     }
 
+    /// A file that becomes a symlink after it was checked is checked again as it is read, and
+    /// nothing is uploaded (PR #11 review, r4308715320).
+    @Test func aFileSwappedForASymlinkAfterTheCheckIsNotUploaded() async throws {
+        let sandbox = try Sandbox()
+        defer { sandbox.remove() }
+        let transport = ScriptedTransport(["upload_attachment": [.json(Self.uploaded)]])
+        let kick = try DevinKick.scripted(transport, environment: ["KICK_UPLOAD_ROOTS": sandbox.root.path])
+        let checked = try #require(try kick.checkUploadable(["notes.txt"], relativeTo: sandbox.root).first)
+        try FileManager.default.removeItem(at: checked)
+        try FileManager.default.createSymbolicLink(at: checked, withDestinationURL: sandbox.outside.appending(path: "secret.txt"))
+        await #expect {
+            try await kick.upload(resolved: checked)
+        } throws: { error in
+            (error as? KickError)?.exitCode == 64
+        }
+        #expect(await transport.count("upload_attachment") == 0)
+    }
+
     @Test func aDirectoryIsNotAFile() async throws {
         let sandbox = try Sandbox()
         defer { sandbox.remove() }
