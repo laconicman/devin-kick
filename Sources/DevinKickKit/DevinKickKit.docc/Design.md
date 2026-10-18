@@ -231,7 +231,9 @@ within a second at batch sizes), write `request.json`, append `requested`, POST,
   more. The residual race is TD-7.
 - Two or more sessions under one run tag: the earliest `created_at` is the run's session (the id
   breaks a tie); the others are recorded and shown, never hidden. Tags are user-editable, so a
-  foreign session can collide too.
+  foreign session can collide too. A run whose create was retried checks its tag again at each
+  lookup, since the first attempt may be listed only after the retry was recorded; a session
+  found that late is recorded as a duplicate, never swapped in, because the run may be in use.
 - A 429 or a refusal is recorded as the run's failure, so the run is no orphan.
 - Ctrl-C kills the process, so the record written before the POST is what makes "never lost"
   hold. The POST and its recording also run in an unstructured `Task` whose value is awaited, so a

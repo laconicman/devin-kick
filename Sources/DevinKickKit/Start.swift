@@ -213,7 +213,7 @@ extension DevinKick {
                 // If the listing fails, kick can't look, and creating again could duplicate: the
                 // error surfaces, and the orphan is reconciled at the next lookup.
                 let found = try await settledListing(run.runTag)
-                if !found.isEmpty { return try started(try await recordCreated(run, sessions: found)) }
+                if !found.isEmpty { return try started(try await recordCreated(run, sessions: found, retried: retries > 0)) }
                 retries += 1
                 guard retries <= timing.retry.maxRetries else { throw error }
                 try? await timing.sleep(timing.retry.backoff(retry: retries))
@@ -228,7 +228,7 @@ extension DevinKick {
                     warn("couldn't check run tag \(run.runTag) for a duplicate after a retried create (\(error.localizedDescription)); `kick status \(run.runID)` checks again.")
                 }
             }
-            return try started(try await recordCreated(run, sessions: found))
+            return try started(try await recordCreated(run, sessions: found, retried: retries > 0))
         }
     }
 

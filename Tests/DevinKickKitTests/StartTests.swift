@@ -115,6 +115,34 @@ struct StartTests {
         #expect(sleeps.delays.first == .seconds(15))
     }
 
+    /// A retried create's first attempt listed only after the retry was recorded turns up at the
+    /// next lookup as a duplicate, without replacing the run's session (PR #11 review, r4308715217).
+    @Test func aLateDuplicateOfARetriedCreateIsFoundAtLookup() async throws {
+        let sandbox = try Sandbox()
+        defer { sandbox.remove() }
+        let late = "0000000000000000000000000000000e"
+        let transport = ScriptedTransport([
+            "get_automation_schemas": [Self.schemas],
+            "create_session": [.response(status: 502), .json(Fixture.session(id: "00000000000000000000000000000002"))],
+            "get_sessions": [.json(Fixture.page([]))],
+            "get_session": [.json(Fixture.session(id: "00000000000000000000000000000002"))],
+        ])
+        let kick = try sandbox.kick(transport)
+        let started = try await kick.start(try sandbox.request(kick))
+        #expect(started.run.createRetried)
+        #expect(started.run.duplicates.isEmpty)
+
+        await transport.script("get_sessions", [.dynamic { sent in
+            .json(Fixture.page([
+                Fixture.session(id: late, tags: Fixture.queriedTags(sent), createdAt: 1_791_800_000),
+                Fixture.session(id: "00000000000000000000000000000002", tags: Fixture.queriedTags(sent)),
+            ]))
+        }])
+        let reading = await kick.observe(started.run.runID)
+        #expect(reading.session?.id == "00000000000000000000000000000002", "the run keeps its session")
+        #expect(await kick.store.lookup(started.run.runID)?.duplicates == [late])
+    }
+
     @Test func theEarliestOfTwoSessionsUnderOneRunTagIsTheRun() async throws {
         let sandbox = try Sandbox()
         defer { sandbox.remove() }

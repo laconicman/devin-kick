@@ -69,8 +69,32 @@ extension DevinKick {
     /// review, r4308715032 and r4308715162).
     func resolvedRun(_ argument: String) async throws(KickError) -> RunState? {
         let run = await store.lookup(argument)
-        guard let run, run.awaitsSession else { return run }
-        return try await reconcile(run)
+        guard let run else { return nil }
+        if run.awaitsSession { return try await reconcile(run) }
+        if run.createRetried { return await refreshDuplicates(run) }
+        return run
+    }
+
+    /// A run whose create was retried checks its tag again: the first attempt may be listed only
+    /// after the retry was recorded (PR #11 review, r4308715217). A session found that way is
+    /// recorded as a duplicate and shown, never swapped in for the run's session, which may
+    /// already be in use. A listing or a write that fails only warns: the run is known either way.
+    func refreshDuplicates(_ run: RunState) async -> RunState {
+        guard let sessionID = run.sessionID else { return run }
+        do throws(KickError) {
+            let known = Set([sessionID] + run.duplicates)
+            let late = try await sessions(tagged: run.runTag).map(\.id).filter { !known.contains($0) }
+            guard !late.isEmpty else { return run }
+            var event = IndexEvent(.created, run: run)
+            event.duplicates = run.duplicates + late
+            try await store.append(event)
+            var updated = run
+            updated.apply(event)
+            return updated
+        } catch {
+            warn("couldn't check run \(run.runID)'s tag for a late duplicate (\(error.localizedDescription)).")
+            return run
+        }
     }
 
     public func observe(_ argument: String) async -> Reading {
@@ -158,7 +182,7 @@ extension DevinKick {
 
     /// Records `found` (earliest first, non-empty) as run's session: `session.json`, then the
     /// `created` event naming any duplicates.
-    func recordCreated(_ run: RunState, sessions found: [SessionSnapshot]) async throws(KickError) -> RunState {
+    func recordCreated(_ run: RunState, sessions found: [SessionSnapshot], retried: Bool = false) async throws(KickError) -> RunState {
         let ordered = found.sorted(by: Self.earliestFirst)
         guard let session = ordered.first else { return run }
         var run = run
@@ -167,6 +191,7 @@ extension DevinKick {
         var event = IndexEvent(.created, run: run)
         let duplicates = ordered.dropFirst().map(\.id)
         if !duplicates.isEmpty { event.duplicates = duplicates }
+        if retried { event.retried = true }
         await store.writeDerived(session.json, to: run.directory.appending(path: "session.json"))
         do {
             try await store.append(event)

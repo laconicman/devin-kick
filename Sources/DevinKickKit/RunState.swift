@@ -37,6 +37,8 @@ struct IndexEvent: Codable, Sendable, Equatable {
     var url: String?
     /// `created`: other sessions carrying the same run tag; the run's session is the earliest.
     var duplicates: [String]?
+    /// `created`: the create was retried, so an earlier attempt may still be listed later.
+    var retried: Bool?
     /// `settled`: the ``Settlement/label`` and the raw status pair.
     var settlement: String?
     var status: String?
@@ -48,7 +50,7 @@ struct IndexEvent: Codable, Sendable, Equatable {
     var message: String?
 
     enum CodingKeys: String, CodingKey {
-        case event, tags, mode, title, resumable, url, duplicates, settlement, status, renamed, message
+        case event, tags, mode, title, resumable, url, duplicates, retried, settlement, status, renamed, message
         case timestamp = "ts"
         case runID = "run_id"
         case sessionID = "session_id"
@@ -89,6 +91,8 @@ public struct RunState: Sendable, Hashable {
     public var updatedAt: Date
     /// Other sessions found under the run's tag (Design: duplicates are found, not prevented).
     public var duplicates: [String] = []
+    /// Whether the create was retried, so an earlier attempt may surface under the run tag late.
+    public var createRetried = false
     /// Whether kick posted a message to the session; ``OutputVerdict/staleFinal`` reads it.
     public var replied = false
     public var archived = false
@@ -141,8 +145,9 @@ public struct RunState: Sendable, Hashable {
         case .requested:
             requestedAt = event.timestamp
         case .created:
-            createdAt = event.timestamp
+            createdAt = createdAt ?? event.timestamp
             duplicates = event.duplicates ?? duplicates
+            createRetried = event.retried ?? createRetried
         case .replied:
             replied = true
         case .settled:
