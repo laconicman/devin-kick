@@ -6,6 +6,13 @@ public struct Completed: Sendable, Equatable {
     public var saved: SavedRun?
     public var error: KickError?
     public var archived: Bool
+
+    /// What the exit status counts: a save, archive or store failure as the error it was (so a
+    /// lone run that couldn't be recorded exits 73), else the session's reading.
+    public var exitReading: Reading {
+        guard let error else { return reading }
+        return Reading(argument: started.run.runID, run: started.run, session: reading.session, verdict: reading.verdict, outcome: .unreadable(error))
+    }
 }
 
 extension DevinKick {

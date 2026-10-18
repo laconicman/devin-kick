@@ -57,6 +57,20 @@ struct RunTests {
         #expect(Reading.exitCode(completed.map(\.reading)) == 0)
     }
 
+    /// A done session whose archive fails isn't a clean exit: the failure counts, alone with its
+    /// own status (from the 2026-10-18 diff review through kick).
+    @Test func anArchiveFailureCountsInTheExitStatus() async throws {
+        var scripts = Self.scripts(sessions: [.json(Fixture.session(detail: "waiting_for_user", output: Self.finalOutput))])
+        scripts["archive_session"] = [.response(status: 403, body: Fixture.problem(status: 403, detail: "forbidden"))]
+        let (kick, started) = try await Self.started(ScriptedTransport(scripts))
+        let completed = await kick.run([started], budget: .seconds(3600))
+        let result = try #require(completed.first)
+        #expect(result.reading.outcome == .settled(.done(detail: "waiting_for_user")))
+        #expect(!result.archived)
+        #expect(Reading.exitCode(completed.map(\.reading)) == 0)
+        #expect(Reading.exitCode(completed.map(\.exitReading)) == 1)
+    }
+
     /// At the budget a working session is saved as it stands, not archived, and exits 75.
     @Test func aSessionStillWorkingAtTheBudgetIsSavedNotArchived() async throws {
         let transport = ScriptedTransport(Self.scripts(sessions: [.json(Fixture.session())]))

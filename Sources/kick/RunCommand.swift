@@ -44,7 +44,7 @@ struct RunCommand: AsyncParsableCommand {
                 }
                 if let error = result.error { printError("\(result.started.run.runID): \(error.localizedDescription)") }
             }
-            return Reading.exitCode(completed.map(\.reading) + failures)
+            return Reading.exitCode(completed.map(\.exitReading) + failures)
         }
     }
 }
