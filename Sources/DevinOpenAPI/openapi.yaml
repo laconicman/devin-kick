@@ -1443,7 +1443,9 @@ components:
           title: Fixed
           type: boolean
         granularity:
-          type: string
+          type:
+          - string
+          - null
           title: Granularity
         label:
           title: Label
@@ -1518,7 +1520,9 @@ components:
           title: Available Devin Modes
           type: array
         default_fallback_devin_mode:
-          type: string
+          type:
+          - string
+          - null
           description: 'Stable mode to prefill session_settings.fallback_devin_mode
             with when a research preview is selected: the organization''s default
             mode when it is stable and available, else the first available stable
@@ -1788,7 +1792,9 @@ components:
             start on fallback_devin_mode.
           title: Devin Mode
         fallback_devin_mode:
-          type: string
+          type:
+          - string
+          - null
           description: Stable mode sessions start in when devin_mode is a research
             preview that is unavailable at run time. Required with a preview devin_mode
             (see schemas.default_fallback_devin_mode), rejected with a stable or null
@@ -2168,7 +2174,9 @@ components:
           title: Slack Channels
           type: array
         slack_dm_scope:
-          type: string
+          type:
+          - string
+          - null
           description: Allow spawned sessions to open 1:1 Slack DMs in the organization's
             connected workspaces. 'org_members' (enterprise accounts only) restricts
             DM targets to members of the organization; 'workspace' (non-enterprise
@@ -2562,7 +2570,9 @@ components:
             on the commit. Null unless this is a repo's root blueprint.
           title: Report Check Runs
         source:
-          type: string
+          type:
+          - string
+          - null
           description: 'Where the YAML is authored: ''git'' (synced from .devin/blueprint.yaml
             in the repo) or ''database'' (edited via the API/UI). Always null for
             enterprise- and org-tier blueprints.'
@@ -2697,7 +2707,9 @@ components:
           title: Status
           type: string
         trigger:
-          type: string
+          type:
+          - string
+          - null
           title: Trigger
         triggered_by_user_id:
           type:
@@ -2948,7 +2960,9 @@ components:
           title: Finding Id
           type: string
         fix_effort:
-          type: string
+          type:
+          - string
+          - null
           description: 'Size of the fix as rated by the scan: small or large. Null
             when the finding has not been rated.'
           title: Fix Effort
@@ -2966,7 +2980,9 @@ components:
             (the scan's Devin session), if any.
           title: Orchestrator Session Id
         payoff:
-          type: string
+          type:
+          - string
+          - null
           description: 'Severity x fix_effort quadrant: quick_win (critical/high,
             small fix), big_fix (critical/high, large fix), easy_fix (medium/low,
             small fix), deprioritize (medium/low, large fix). Null when unrated.'
@@ -3042,7 +3058,9 @@ components:
           description: Evidence summary recorded by runtime validation, if any.
           title: Validation Evidence
         validation_result:
-          type: string
+          type:
+          - string
+          - null
           description: 'Recorded runtime validation outcome, if any: confirmed, false_positive,
             or inconclusive.'
           title: Validation Result
@@ -7180,7 +7198,9 @@ components:
           $ref: '#/components/schemas/SessionInsightsAnalysis'
           description: AI-generated session analysis. None if analysis has not completed.
         analysis_status:
-          type: string
+          type:
+          - string
+          - null
           description: 'State of the most recent session analysis run: ''completed'',
             ''started'' (in progress) or ''failed''. None if analysis was never run.
             ''failed'' distinguishes a run that errored from one that never happened;
@@ -7193,7 +7213,9 @@ components:
           description: ID of the automation that created this session, if any.
           title: Automation Id
         category:
-          type: string
+          type:
+          - string
+          - null
           description: The session's assigned use-case category, if categorisation
             has run. Only populated on get/list endpoints.
           title: Category
@@ -7208,7 +7230,9 @@ components:
           title: Created At
           type: integer
         devin_mode:
-          type: string
+          type:
+          - string
+          - null
           description: The Devin agent mode the session was created with, after resolving
             org/user defaults and parent-session inheritance. None when the session
             runs an agent preview that has no mode equivalent.
@@ -7242,7 +7266,9 @@ components:
             owned by their creator's account rather than an organization.
           title: Org Id
         origin:
-          type: string
+          type:
+          - string
+          - null
           description: The origin from which the session was created.
           title: Origin
         parent_session_id:
@@ -7281,7 +7307,9 @@ components:
           title: Status
           type: string
         status_detail:
-          type: string
+          type:
+          - string
+          - null
           description: 'Additional detail about the session''s current status. When
             status is ''running'': ''working'' (actively working), ''waiting_for_user''
             (needs user input), ''waiting_for_approval'' (awaiting action approval
@@ -7547,7 +7575,9 @@ components:
           description: ID of the automation that created this session, if any.
           title: Automation Id
         category:
-          type: string
+          type:
+          - string
+          - null
           description: The session's assigned use-case category, if categorisation
             has run. Only populated on get/list endpoints.
           title: Category
@@ -7562,7 +7592,9 @@ components:
           title: Created At
           type: integer
         devin_mode:
-          type: string
+          type:
+          - string
+          - null
           description: The Devin agent mode the session was created with, after resolving
             org/user defaults and parent-session inheritance. None when the session
             runs an agent preview that has no mode equivalent.
@@ -7588,7 +7620,9 @@ components:
             owned by their creator's account rather than an organization.
           title: Org Id
         origin:
-          type: string
+          type:
+          - string
+          - null
           description: The origin from which the session was created.
           title: Origin
         parent_session_id:
@@ -7622,7 +7656,9 @@ components:
           title: Status
           type: string
         status_detail:
-          type: string
+          type:
+          - string
+          - null
           description: 'Additional detail about the session''s current status. When
             status is ''running'': ''working'' (actively working), ''waiting_for_user''
             (needs user input), ''waiting_for_approval'' (awaiting action approval

@@ -241,6 +241,10 @@ struct DevinSpecTool {
     /// In `node`'s subtree, drops `enum` from every string (or untyped) schema (transform 2) and
     /// `additionalProperties: false` from every schema (transform 4). An `additionalProperties`
     /// that is a schema, or `true`, stays: only the boolean `false` closes an object.
+    ///
+    /// Every mapping is read as a schema. That holds for this document, which has no property
+    /// named `enum` or `additionalProperties` and no such key inside example or default data
+    /// (checked 2026-10-19); a document that did would need a walk aware of schema positions.
     static func normalizingResponse(_ node: Node, stats: inout Stats) -> Node {
         switch node {
         case .scalar, .alias:
@@ -253,8 +257,12 @@ struct DevinSpecTool {
                 guard let value = map[key] else { continue }
                 map[key] = normalizingResponse(value, stats: &stats)
             }
-            let type = map["type"]?.string
-            if map["enum"] != nil, type == nil || type == "string" {
+            // A nullable string enum arrives from transform 1 as `type: [string, "null"]`, a
+            // sequence, which `.string` can't read: it is typed already and must keep its "null"
+            // (diff review of M1's second PR through kick). Only an untyped enum gets "string".
+            let type = map["type"]
+            let types = type?.sequence?.compactMap(\.string) ?? type?.string.map { [$0] } ?? []
+            if map["enum"] != nil, types.isEmpty || types.contains("string") {
                 map["enum"] = nil
                 if type == nil { map["type"] = "string" }
                 stats.responseEnums += 1
