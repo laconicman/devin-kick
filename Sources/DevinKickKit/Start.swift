@@ -187,16 +187,14 @@ extension DevinKick {
     func create(_ body: Components.Schemas.SessionCreateRequest, orgID: String, run: RunState) async throws(KickError) -> StartedRun {
         var retries = 0
         while true {
-            do {
-                let session = try await call(Operations.CreateSession.id) {
+            let session: Components.Schemas.SessionResponse
+            // Only the POST is classified here. Once a session exists, a failure to record it is
+            // that failure (the store's message names the session), never a refusal: recorded as
+            // `failed`, the run would leave every reconcile, and its session would go untracked.
+            do throws(KickError) {
+                session = try await call(Operations.CreateSession.id) {
                     try await client.createSession(path: .init(orgId: orgID), body: .json(body)).ok.body.json
                 }
-                var found = [SessionSnapshot(session)]
-                if retries > 0, let tagged = try? await sessions(tagged: run.runTag) {
-                    // An earlier attempt whose answer was lost may have created one after all.
-                    found += tagged.filter { $0.id != session.sessionId }
-                }
-                return try started(try await recordCreated(run, sessions: found))
             } catch {
                 guard Self.mayHaveCreated(error) else {
                     var event = IndexEvent(.failed, run: run)
@@ -212,7 +210,18 @@ extension DevinKick {
                 retries += 1
                 guard retries <= timing.retry.maxRetries else { throw error }
                 try? await timing.sleep(timing.retry.backoff(retry: retries))
+                continue
             }
+            var found = [SessionSnapshot(session)]
+            if retries > 0 {
+                // An earlier attempt whose answer was lost may have created one after all.
+                do throws(KickError) {
+                    found += try await sessions(tagged: run.runTag).filter { $0.id != session.sessionId }
+                } catch {
+                    warn("couldn't check run tag \(run.runTag) for a duplicate after a retried create (\(error.localizedDescription)); `kick status \(run.runID)` checks again.")
+                }
+            }
+            return try started(try await recordCreated(run, sessions: found))
         }
     }
 
