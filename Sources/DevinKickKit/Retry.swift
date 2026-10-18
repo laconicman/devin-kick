@@ -117,6 +117,9 @@ enum RetryClass: Sendable, Equatable {
 struct RetryMiddleware: Sendable {
     let policy: RetryPolicy
     let sleep: @Sendable (Duration) async throws -> Void
+
+    /// The most of a retried response's body read to release its connection.
+    static let maximumDrainBytes = 64 * 1024
 }
 
 extension RetryMiddleware: ClientMiddleware {
@@ -144,6 +147,11 @@ extension RetryMiddleware: ClientMiddleware {
                 case .wait(let requested): delay = requested
                 case .tooLong: return (response, responseBody)
                 }
+                // URLSessionTransport streams by default on Darwin (swift-openapi-urlsession 1.3.2,
+                // `Implementation.platformDefault`), and an unread body keeps its task, and its
+                // connection, suspended until the body is released. An error body is small, so it
+                // is read to the end before the retry.
+                if let responseBody { _ = try? await Data(collecting: responseBody, upTo: Self.maximumDrainBytes) }
             } catch {
                 guard replayable, retry < policy.maxRetries, !Task.isCancelled, retryClass.retries(error: error) else {
                     throw error

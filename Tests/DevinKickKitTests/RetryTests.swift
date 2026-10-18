@@ -1,6 +1,9 @@
 import DevinOpenAPI
 @testable import DevinKickKit
 import Foundation
+import HTTPTypes
+import OpenAPIRuntime
+import Synchronization
 import Testing
 
 @Suite("Retries — transport errors, 429 and 5xx, by idempotency; error statuses read once")
@@ -131,6 +134,42 @@ struct RetryTests {
     }
 
     /// FastAPI's validation shape: `detail` is a list of `{loc, msg}`.
+    /// Counts the pulls on a streamed body: a second pull asks past its only chunk, so the body
+    /// was read to the end.
+    final class PullCounter: Sendable {
+        let pulls = Mutex(0)
+    }
+
+    /// A transport whose first answer is a 503 over a single-pass streamed body, as
+    /// URLSessionTransport's streaming mode hands one over; then a 200.
+    actor StreamingProbe: ClientTransport {
+        private(set) var calls = 0
+        let counter = PullCounter()
+
+        func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+            calls += 1
+            guard calls == 1 else {
+                var ok = HTTPResponse(status: .ok)
+                ok.headerFields[.contentType] = "application/json"
+                return (ok, HTTPBody(Fixture.selfBody))
+            }
+            let counter = counter
+            let stream = AsyncStream<ArraySlice<UInt8>> {
+                counter.pulls.withLock { $0 += 1; return $0 } == 1 ? ArraySlice("<html>busy</html>".utf8) : nil
+            }
+            return (HTTPResponse(status: .serviceUnavailable), HTTPBody(stream, length: .unknown, iterationBehavior: .single))
+        }
+    }
+
+    @Test func aRetriedResponseBodyIsReadToTheEndFirst() async throws {
+        let probe = StreamingProbe()
+        let configuration = try Configuration.fromEnvironment(["DEVIN_API_KEY": "cog_test", "KICK_STORE": temporaryDirectory().path])
+        let kick = DevinKick(configuration: configuration, transport: probe, timing: SleepRecorder().timing)
+        _ = try await kick.whoami()
+        #expect(await probe.calls == 2)
+        #expect(probe.counter.pulls.withLock { $0 } == 2)
+    }
+
     @Test func validationIssuesAreQuotedWithTheirLocation() {
         let body = #"{"detail":[{"loc":["body","devin_mode"],"msg":"Input should be 'swe-2-max'","type":"enum"},{"loc":["body",0],"msg":"second"}]}"#
         let problem = ProblemMiddleware.problem(status: 422, body: Data(body.utf8))
