@@ -61,14 +61,16 @@ extension KickError: LocalizedError {
 }
 
 extension KickError {
-    /// Classifies an error thrown by the generated client: a transport failure or an
-    /// undecodable body. HTTP error statuses arrive as documented outputs, not as throws.
+    /// Classifies an error thrown by the generated client: an error status (read by
+    /// `ProblemMiddleware`), a transport failure or an undecodable body.
     init(clientError error: any Error) {
         guard let clientError = error as? ClientError else {
             self = .transport(error.localizedDescription)
             return
         }
         switch clientError.underlyingError {
+        case let problem as ProblemResponse:
+            self = .server(status: problem.status, code: problem.code, detail: problem.detail)
         case is URLError:
             self = .transport(clientError.underlyingError.localizedDescription)
         case is DecodingError:
