@@ -34,9 +34,8 @@ struct UploadRoots: Sendable {
     /// `path` resolved (symlinks, `.` and `..`) against `base`, if it is a regular file inside a
     /// root; a usage error otherwise.
     func resolve(_ path: String, relativeTo base: URL? = nil) throws(KickError) -> URL {
-        let absolute = path.hasPrefix("/") || base == nil
-            ? URL(fileURLWithPath: NSString(string: path).expandingTildeInPath)
-            : URL(fileURLWithPath: path, relativeTo: base).absoluteURL
+        // The same resolution as a manifest's prompt and schema paths: `~` expanded first.
+        let absolute = DevinKick.resolve(path, relativeTo: base)
         guard let resolved = Self.realPath(absolute.path) else {
             throw .usage("No such file: \(path)")
         }

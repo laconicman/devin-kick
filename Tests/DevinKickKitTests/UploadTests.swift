@@ -77,6 +77,20 @@ struct UploadTests {
         #expect(text.contains("hello"))
     }
 
+    /// Every path in a manifest resolves alike: `~` first, then relative to its directory
+    /// (from the 2026-10-18 diff review through kick: `attach` didn't expand `~`).
+    @Test func tildeExpandsBeforeTheManifestDirectoryApplies() throws {
+        let base = URL(fileURLWithPath: "/tmp/manifest-dir", isDirectory: true)
+        #expect(DevinKick.resolve("~/a.pdf", relativeTo: base).path == NSHomeDirectory() + "/a.pdf")
+        #expect(DevinKick.resolve("files/a.pdf", relativeTo: base).path == "/tmp/manifest-dir/files/a.pdf")
+        let roots = try UploadRoots([NSHomeDirectory()])
+        #expect {
+            try roots.resolve("~/devin-kick-no-such-file-\(UUID().uuidString)", relativeTo: base)
+        } throws: { error in
+            (error as? KickError)?.localizedDescription.hasPrefix("No such file") == true
+        }
+    }
+
     @Test func aDirectoryIsNotAFile() async throws {
         let sandbox = try Sandbox()
         defer { sandbox.remove() }
