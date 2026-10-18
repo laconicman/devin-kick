@@ -201,7 +201,13 @@ extension DevinKick {
                     var event = IndexEvent(.failed, run: run)
                     if case .server(_, let code, _) = error { event.errorCode = code }
                     event.message = error.localizedDescription
-                    try? await store.append(event)
+                    do throws(KickError) {
+                        try await store.append(event)
+                    } catch let storeError {
+                        // Unrecorded, the refused run would read as an orphan whose session
+                        // lookups chase forever (PR #11 review, r4308714989).
+                        throw .store("\(storeError.localizedDescription) The server had refused the create: \(error.localizedDescription)")
+                    }
                     throw error
                 }
                 // If the listing fails, kick can't look, and creating again could duplicate: the

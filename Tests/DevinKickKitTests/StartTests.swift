@@ -157,6 +157,31 @@ struct StartTests {
         #expect(await transport.count("create_session") == (status == 429 ? 5 : 1))
     }
 
+    /// A refused create whose failure can't be recorded surfaces as the store error, quoting
+    /// the refusal, rather than leaving a phantom orphan behind (PR #11 review, r4308714989).
+    @Test func aRefusalThatCantBeRecordedIsAStoreError() async throws {
+        let sandbox = try Sandbox()
+        defer { sandbox.remove() }
+        let store = sandbox.base.appending(path: "store")
+        let index = store.appending(path: "index.jsonl")
+        let transport = ScriptedTransport([
+            "get_automation_schemas": [Self.schemas],
+            // By the time the refusal arrives, the index can't be written to.
+            "create_session": [.dynamic { _ in
+                try? FileManager.default.removeItem(at: index)
+                try? FileManager.default.createDirectory(at: index, withIntermediateDirectories: true)
+                return .response(status: 422, body: Fixture.problem(status: 422, code: "bad_mode", detail: "no such mode"))
+            }],
+        ])
+        let kick = try sandbox.kick(transport)
+        await #expect {
+            try await kick.start(try sandbox.request(kick))
+        } throws: { error in
+            let error = error as? KickError
+            return error?.exitCode == 73 && error?.localizedDescription.contains("bad_mode: no such mode") == true
+        }
+    }
+
     @Test func aListingThatFailsLeavesAnOrphanAndCreatesNothingMore() async throws {
         let sandbox = try Sandbox()
         defer { sandbox.remove() }
