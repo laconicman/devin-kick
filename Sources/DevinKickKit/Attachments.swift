@@ -57,6 +57,8 @@ extension DevinKick {
 
     /// The most UTF-8 bytes of a saved attachment's name.
     static let maximumNameBytes = 200
+    /// The longest extension kept apart from the stem when a name is cut.
+    static let maximumExtensionBytes = 16
 
     /// `name` as a safe basename in a directory already holding `taken`: no separators, no
     /// `.` or `..`, no leading dot or control characters, capped in length (keeping the
@@ -66,7 +68,10 @@ extension DevinKick {
         var base = String(last.unicodeScalars.filter { !CharacterSet.controlCharacters.contains($0) })
         while base.hasPrefix(".") { base.removeFirst() }
         if base.isEmpty { base = "attachment" }
-        let ext = (base as NSString).pathExtension
+        // An "extension" longer than any real one is part of the name: kept apart, it alone could
+        // exceed the cap (PR #11 review, r4308715273).
+        let found = (base as NSString).pathExtension
+        let ext = found.utf8.count <= maximumExtensionBytes ? found : ""
         let stem = ext.isEmpty ? base : String(base.dropLast(ext.count + 1))
         let suffix = ext.isEmpty ? "" : ".\(ext)"
         /// The stem cut to fit the cap together with `tail` (a number, when the name is taken).

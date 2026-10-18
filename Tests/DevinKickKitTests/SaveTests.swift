@@ -60,6 +60,14 @@ struct SaveTests {
         #expect(numbered.utf8.count <= DevinKick.maximumNameBytes)
     }
 
+    /// An "extension" longer than any real one is cut with the rest of the name (PR #11 review,
+    /// r4308715273).
+    @Test func anOversizedExtensionIsCutWithTheName() {
+        let name = DevinKick.safeName("report." + String(repeating: "x", count: 300), taken: [])
+        #expect(name.utf8.count <= DevinKick.maximumNameBytes)
+        #expect(name.hasPrefix("report.x"))
+    }
+
     /// A name of dots alone would be a dot-segment; its dots are encoded too.
     @Test(arguments: [("..", "%2E%2E"), (".", "%2E"), ("../x", "..%2Fx"), ("a.b c", "a.b%20c")])
     func namesTravelAsOneSegment(_ name: String, encoded: String) {
