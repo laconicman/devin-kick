@@ -69,6 +69,11 @@ actor ModeCatalog {
                     state = .unavailable
                     warn("the organization's automation schemas list no available_devin_modes; the server checks the mode.")
                 }
+            } catch .decoding {
+                // Live (2026-10-18) the answer carries fields the published spec doesn't list
+                // under `additionalProperties: false`, which the generated decoder enforces.
+                state = .unavailable
+                warn("available_devin_modes can't be read: Devin's answer has fields its own spec closes out (TechDebt TD-8). The server checks the mode.")
             } catch {
                 state = .unavailable
                 warn("couldn't read available_devin_modes (\(error.localizedDescription)); the server checks the mode.")

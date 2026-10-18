@@ -237,11 +237,13 @@ struct StartTests {
         #expect(throws: KickError.self) { try Configuration.fromEnvironment(["DEVIN_API_KEY": "cog_x", "KICK_MODE": "swe-3"]) }
     }
 
-    /// The list is documented for automations, so a miss, an absent list and a refusal warn.
+    /// The list is documented for automations, so a miss, an absent list, a refusal and an
+    /// answer the closed schema can't decode (TD-8: a key the spec doesn't list) all warn.
     @Test(arguments: [
         ScriptedTransport.Reply.json(Fixture.schemas(modes: ["normal"])),
         .json(Fixture.schemas(modes: nil)),
         .response(status: 403, body: Fixture.problem(status: 403, detail: "forbidden")),
+        .json(#"{"update_semantics":"merge_patch","sources":{},"available_devin_modes":["swe-2-max"],"preflight_available":true}"#),
     ])
     func availableModesOnlyWarn(_ reply: ScriptedTransport.Reply) async throws {
         let sandbox = try Sandbox()
