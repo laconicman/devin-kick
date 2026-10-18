@@ -108,9 +108,9 @@ that cancels a caller mid-POST and finds the run recorded.
 
 Tracked in [#9](https://github.com/laconicman/devin-kick/issues/9).
 
-Create has no idempotency key, and the undocumented `devin_id` query parameter is ignored (probed
-live 2026-10-18: a fresh id came back server-minted in both formats, and a replay created a second
-session). After a lost answer kick lists by run tag twice, 15 s apart, before creating again
+Create has no idempotency key. The spec lists an optional `devin_id` query parameter on create
+without describing it, and the server ignores it (probed live 2026-10-18: a fresh id came back
+server-minted in both formats, and a replay created a second session). After a lost answer kick lists by run tag twice, 15 s apart, before creating again
 (<doc:Design>, "Never lost; duplicates found, not prevented").
 
 **Cost:** a session that appears in the listing more than 15 s after its lost answer is duplicated.

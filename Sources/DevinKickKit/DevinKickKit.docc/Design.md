@@ -215,9 +215,9 @@ per-operation classification, not the loop.
 
 ### Never lost; duplicates found, not prevented
 
-Create has no idempotency key, and the undocumented `devin_id` query parameter is ignored: a live
-probe (2026-10-18) got server-minted ids back in both formats, and a replay created a second
-session. So a start is recorded before its POST, in a pinned order: upload the attachments, mint
+Create has no idempotency key. The spec lists an optional `devin_id` query parameter on create
+without describing it, and the server ignores it: a live probe (2026-10-18) got server-minted ids
+back in both formats, and a replay created a second session. So a start is recorded before its POST, in a pinned order: upload the attachments, mint
 the run id (`yyyyMMdd-HHmmss-xxxx`, re-minted if the index holds it, since four hex digits collide
 within a second at batch sizes), write `request.json`, append `requested`, POST, write
 `session.json`, append `created`. Every session carries the tags `kick` and `kick-run-<id>`.
@@ -253,6 +253,10 @@ places run directories elsewhere; the index stays central and records absolute p
   lost; derived files only warn, because `save` rewrites them, and recreates a deleted run
   directory (not `request.json`, the submit record).
 - The store and its run directories are `0700`: they hold prompts and attachments.
+- The index is read once per process, which suits the one-shot CLI. A long-lived process (M2's
+  server) doesn't see another process's appends, and two processes minting in the same second
+  can pick one run id (1 in 65,536 a pair; the duplicates rule then finds both sessions): M2
+  re-reads the index's tail before minting and at lookup.
 - An actor serializes writes in one process. Across processes each index line is one `write(2)`
   on an `O_APPEND` descriptor, with no locking: POSIX.1-2024 `write()` makes each write to a
   regular file atomic and allows no other modification between the seek to the end and the write.

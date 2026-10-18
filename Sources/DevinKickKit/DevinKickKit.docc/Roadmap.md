@@ -24,7 +24,9 @@ owner splits one. The why is in <doc:Design>.
 ### Now
 
 - **M2 — the side profile:** `kick serve --profile side` with 8 tools, compact replies, and no
-  result ever inlined. The Kit's readings, status line and exit rank are reused as they are.
+  result ever inlined. The Kit's readings, status line and exit rank are reused as they are. The
+  server is long-lived, so the run store re-reads the index's tail before minting and at lookup
+  (<doc:Design>, "The run store").
 
 ### Next
 

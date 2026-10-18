@@ -181,7 +181,8 @@ extension DevinKick {
     }
 
     /// POSTs the create and records the answer. A create isn't idempotent (the spec has no
-    /// key, and the undocumented `devin_id` is ignored: probed 2026-10-18), so after an error
+    /// key, and its `devin_id` query parameter, listed without a description, is ignored: probed
+    /// 2026-10-18), so after an error
     /// where the session may exist, kick looks for it by run tag, twice with a settle delay
     /// between, before it creates again; a 429 or a refusal is recorded as the run's failure.
     func create(_ body: Components.Schemas.SessionCreateRequest, orgID: String, run: RunState) async throws(KickError) -> StartedRun {
