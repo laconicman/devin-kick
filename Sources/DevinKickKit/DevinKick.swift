@@ -14,17 +14,27 @@ public struct DevinKick: Sendable {
     let client: Client
     let configuration: Configuration
     let timing: Timing
+    /// The run store at ``Configuration/storeURL``.
+    public let store: RunStore
 
-    public init(configuration: Configuration) {
-        self.init(configuration: configuration, transport: URLSessionTransport())
+    /// `warn` receives what the Kit reports without failing: a derived file it couldn't write,
+    /// a mode the organization may not offer.
+    public init(configuration: Configuration, warn: @escaping RunStore.Warn = RunStore.standardError) {
+        self.init(configuration: configuration, transport: URLSessionTransport(), warn: warn)
     }
 
     /// The injection point for tests (`@testable`): a scripted transport and instant delays.
     /// Internal, because a public init taking the generated `Client` or its transport would
     /// break the generated-type boundary (Design: "One binary, two faces, three layers").
-    init(configuration: Configuration, transport: any ClientTransport, timing: Timing = .standard) {
+    init(
+        configuration: Configuration,
+        transport: any ClientTransport,
+        timing: Timing = .standard,
+        warn: @escaping RunStore.Warn = RunStore.standardError
+    ) {
         self.configuration = configuration
         self.timing = timing
+        self.store = RunStore(root: configuration.storeURL, warn: warn)
         self.client = Client(
             serverURL: configuration.serverURL,
             transport: transport,

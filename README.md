@@ -49,6 +49,7 @@ Stable, so scripts may rely on it:
 | 69 | no answer, or 429 / 5xx: retry |
 | 1 | failed |
 | 64 | usage error |
+| 73 | the run store couldn't record the run (`KICK_STORE`, `--out`) |
 | 78 | configuration error |
 
 ## Tests

@@ -9,16 +9,24 @@ public struct Configuration: Sendable {
     public var orgID: String?
     /// The spec declares no `servers`, so the base URL is ours to supply.
     public var serverURL: URL
+    /// The run store's root (`KICK_STORE`): see ``RunStore``.
+    public var storeURL: URL
 
     public static let defaultServerURL = URL(string: "https://api.devin.ai")!
 
-    public init(apiKey: String, orgID: String?, serverURL: URL = defaultServerURL) {
+    /// `~/Library/Application Support/devin-kick`.
+    public static var defaultStoreURL: URL {
+        URL.applicationSupportDirectory.appending(path: "devin-kick", directoryHint: .isDirectory)
+    }
+
+    public init(apiKey: String, orgID: String?, serverURL: URL = defaultServerURL, storeURL: URL = defaultStoreURL) {
         self.apiKey = apiKey
         self.orgID = orgID
         self.serverURL = serverURL
+        self.storeURL = storeURL
     }
 
-    /// Reads `DEVIN_API_KEY`, and optionally `DEVIN_ORG_ID` and `KICK_SERVER_URL`.
+    /// Reads `DEVIN_API_KEY`, and optionally `DEVIN_ORG_ID`, `KICK_SERVER_URL` and `KICK_STORE`.
     public static func fromEnvironment(
         _ environment: [String: String] = ProcessInfo.processInfo.environment
     ) throws(KickError) -> Configuration {
@@ -32,7 +40,11 @@ public struct Configuration: Sendable {
         if let override = environment["KICK_SERVER_URL"], !override.isEmpty {
             serverURL = try validatedServerURL(override)
         }
-        return Configuration(apiKey: apiKey, orgID: orgID, serverURL: serverURL)
+        var storeURL = defaultStoreURL
+        if let store = environment["KICK_STORE"], !store.isEmpty {
+            storeURL = URL(fileURLWithPath: NSString(string: store).expandingTildeInPath, isDirectory: true)
+        }
+        return Configuration(apiKey: apiKey, orgID: orgID, serverURL: serverURL, storeURL: storeURL)
     }
 
     /// The organization id, or a configuration error naming the variable to set.

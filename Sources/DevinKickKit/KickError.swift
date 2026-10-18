@@ -17,6 +17,9 @@ public enum KickError: Error, Sendable, Equatable {
     case server(status: Int, code: String?, detail: String)
     /// Devin answered 2xx with a body this version can't read.
     case decoding(String)
+    /// The run store couldn't record a run: `request.json` or the index. Not retryable as is;
+    /// fix the store (`KICK_STORE`, `--out`) first.
+    case store(String)
 
     /// The CLI exit status: sysexits-style where one fits.
     public var exitCode: Int32 {
@@ -26,6 +29,7 @@ public enum KickError: Error, Sendable, Equatable {
         case .transport: 69                  // EX_UNAVAILABLE: retry
         case .server(let status, _, _) where status == 429 || status >= 500: 69
         case .server, .decoding: 1
+        case .store: 73                      // EX_CANTCREAT
         }
     }
 
@@ -36,7 +40,7 @@ public enum KickError: Error, Sendable, Equatable {
 extension KickError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case .config(let message), .usage(let message):
+        case .config(let message), .usage(let message), .store(let message):
             return message
         case .transport(let message):
             return "No answer from Devin (\(message)). Retry; sessions already created are unaffected."

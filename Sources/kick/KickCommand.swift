@@ -14,10 +14,7 @@ struct KickCommand: AsyncParsableCommand {
         Export them from ~/.zshenv so every shell, and every agent's shell, sees them.
 
         Exit status (stable; scripts may rely on it):
-          0   done                    10  needs input (Devin asks, or awaits approval)
-          75  still working: poll     11  unknown state, printed raw
-          69  no answer, or 429/5xx: retry
-          1   failed                  64  usage error         78  configuration error
+        \(ExitStatus.help)
         """,
         version: DevinKick.version,
         subcommands: [WhoAmI.self]

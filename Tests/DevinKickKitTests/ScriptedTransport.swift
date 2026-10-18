@@ -86,16 +86,19 @@ actor SleepRecorder {
 }
 
 extension DevinKick {
-    /// A façade over `transport` with instant, recorded delays.
+    /// A façade over `transport` with instant, recorded delays and its own temporary store, so
+    /// no test writes to the real one.
     static func scripted(
         _ transport: ScriptedTransport,
         sleeps: SleepRecorder = SleepRecorder(),
+        warnings: WarningLog = WarningLog(),
         environment: [String: String] = [:]
     ) throws -> DevinKick {
         let configuration = try Configuration.fromEnvironment(
-            ["DEVIN_API_KEY": "cog_test", "DEVIN_ORG_ID": "org-test"].merging(environment) { $1 }
+            ["DEVIN_API_KEY": "cog_test", "DEVIN_ORG_ID": "org-test", "KICK_STORE": temporaryDirectory().path]
+                .merging(environment) { $1 }
         )
-        return DevinKick(configuration: configuration, transport: transport, timing: sleeps.timing)
+        return DevinKick(configuration: configuration, transport: transport, timing: sleeps.timing, warn: warnings.sink)
     }
 }
 
