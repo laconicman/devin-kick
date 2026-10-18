@@ -3,7 +3,7 @@ import Foundation
 import Synchronization
 import Testing
 
-@Suite("Run — start, poll, save, archive what's done")
+@Suite("Run — start, poll, save, archive what's done", .temporaryDirectories)
 struct RunTests {
     static let finalOutput = #"{"answer_md":"a","doubts":[],"questions_for_user":[],"kick_final":true}"#
 

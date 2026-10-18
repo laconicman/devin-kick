@@ -8,7 +8,7 @@ import Testing
 /// `KICK_LIVE=1 swift test --filter LiveSession`, with `DEVIN_API_KEY` and `DEVIN_ORG_ID`
 /// exported. They answer the M1 plan's open live questions; the answers are in Design and
 /// TechDebt.
-@Suite("LiveSession", .enabled(if: ProcessInfo.processInfo.environment["KICK_LIVE"] == "1"), .timeLimit(.minutes(15)))
+@Suite("LiveSession", .enabled(if: ProcessInfo.processInfo.environment["KICK_LIVE"] == "1"), .timeLimit(.minutes(15)), .temporaryDirectories)
 struct LiveSessionTests {
     static let testTag = "devin-kick-test"
     /// Prompts open like this, so a reader of the session knows what it is.

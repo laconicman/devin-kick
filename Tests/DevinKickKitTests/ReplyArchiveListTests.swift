@@ -3,7 +3,7 @@ import Foundation
 import HTTPTypes
 import Testing
 
-@Suite("Reply, archive and list")
+@Suite("Reply, archive and list", .temporaryDirectories)
 struct ReplyArchiveListTests {
     static let sessionID = "0000000000000000000000000000000d"
     static let runID = "20261018-120000-000d"

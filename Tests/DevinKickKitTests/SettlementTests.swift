@@ -3,7 +3,7 @@ import DevinOpenAPI
 import Foundation
 import Testing
 
-@Suite("Settlement — Devin's status pair and an output verdict → where a caller stands")
+@Suite("Settlement — Devin's status pair and an output verdict → where a caller stands", .temporaryDirectories)
 struct SettlementTests {
     struct Case: Sendable, CustomTestStringConvertible {
         let status: String

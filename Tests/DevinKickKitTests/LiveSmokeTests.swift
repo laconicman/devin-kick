@@ -6,7 +6,7 @@ import Testing
 /// The contract tests: real calls against Devin's API, the first thing to fail when the contract
 /// drifts. Off by default; run with `KICK_LIVE=1 swift test --filter LiveSmoke`, with
 /// `DEVIN_API_KEY` and `DEVIN_ORG_ID` exported. They read only; they create no session.
-@Suite("LiveSmoke", .enabled(if: ProcessInfo.processInfo.environment["KICK_LIVE"] == "1"))
+@Suite("LiveSmoke", .enabled(if: ProcessInfo.processInfo.environment["KICK_LIVE"] == "1"), .temporaryDirectories)
 struct LiveSmokeTests {
     let kick: DevinKick
 

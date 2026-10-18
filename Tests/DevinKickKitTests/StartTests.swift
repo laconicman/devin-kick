@@ -2,7 +2,7 @@
 import Foundation
 import Testing
 
-@Suite("Start — modes, manifests, the run tag, and a create whose answer was lost")
+@Suite("Start — modes, manifests, the run tag, and a create whose answer was lost", .temporaryDirectories)
 struct StartTests {
     /// A directory with a prompt, a schema and an attachment, and a façade over a temp store.
     struct Sandbox {

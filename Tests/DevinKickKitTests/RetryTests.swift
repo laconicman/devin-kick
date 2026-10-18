@@ -6,7 +6,7 @@ import OpenAPIRuntime
 import Synchronization
 import Testing
 
-@Suite("Retries — transport errors, 429 and 5xx, by idempotency; error statuses read once")
+@Suite("Retries — transport errors, 429 and 5xx, by idempotency; error statuses read once", .temporaryDirectories)
 struct RetryTests {
     /// Whether `delay` is `seconds` within the policy's ±20 % jitter.
     static func isBackoff(_ delay: Duration, around seconds: Double) -> Bool {

@@ -3,7 +3,7 @@ import Foundation
 import HTTPTypes
 import Testing
 
-@Suite("Status and wait — one line per session, a bounded wait, one exit status")
+@Suite("Status and wait — one line per session, a bounded wait, one exit status", .temporaryDirectories)
 struct StatusTests {
     static let finalOutput = #"{"answer_md":"a","doubts":[],"questions_for_user":[],"kick_final":true}"#
     static let idA = "0000000000000000000000000000000a"

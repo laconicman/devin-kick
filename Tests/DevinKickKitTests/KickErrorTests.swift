@@ -2,7 +2,7 @@
 import Foundation
 import Testing
 
-@Suite("KickError and Configuration")
+@Suite("KickError and Configuration", .temporaryDirectories)
 struct KickErrorTests {
     @Test func exitCodesFollowSysexits() {
         #expect(KickError.config("x").exitCode == 78)

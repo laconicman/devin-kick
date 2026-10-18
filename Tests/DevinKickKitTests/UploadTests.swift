@@ -2,7 +2,7 @@
 import Foundation
 import Testing
 
-@Suite("Uploads — only from KICK_UPLOAD_ROOTS, never the same content twice")
+@Suite("Uploads — only from KICK_UPLOAD_ROOTS, never the same content twice", .temporaryDirectories)
 struct UploadTests {
     static let uploaded = #"{"attachment_id":"00000000-0000-0000-0000-000000000001","name":"notes.txt","url":"https://app.devin.ai/attachments/00000000-0000-0000-0000-000000000001/notes.txt"}"#
 

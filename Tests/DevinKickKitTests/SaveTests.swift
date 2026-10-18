@@ -4,7 +4,7 @@ import HTTPTypes
 import Synchronization
 import Testing
 
-@Suite("Messages, attachments and save — into the run directory")
+@Suite("Messages, attachments and save — into the run directory", .temporaryDirectories)
 struct SaveTests {
     static let sessionID = "0000000000000000000000000000000c"
     static let attachmentID = "00000000-0000-0000-0000-00000000000c"

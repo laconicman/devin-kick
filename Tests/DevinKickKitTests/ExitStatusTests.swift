@@ -4,7 +4,7 @@ import Testing
 
 /// CLAUDE.md rule 2: an exit status lives in Settlement or KickError, the README's table and
 /// `kick --help` at once. `--help` prints ``ExitStatus/help``; these hold the rest to it.
-@Suite("Exit statuses — one table for the code, --help and the README")
+@Suite("Exit statuses — one table for the code, --help and the README", .temporaryDirectories)
 struct ExitStatusTests {
     static let documented = Set(ExitStatus.rows.map(\.code))
 

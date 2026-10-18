@@ -2,7 +2,7 @@
 import Foundation
 import Testing
 
-@Suite("Schema — kick's completion field, added and read back")
+@Suite("Schema — kick's completion field, added and read back", .temporaryDirectories)
 struct SchemaTests {
     static func object(_ data: Data) throws -> [String: Any] {
         try #require(try JSONSerialization.jsonObject(with: data) as? [String: Any])

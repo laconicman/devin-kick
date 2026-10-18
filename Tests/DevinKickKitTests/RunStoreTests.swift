@@ -14,12 +14,7 @@ final class WarningLog: Sendable {
     }
 }
 
-/// A fresh directory under the system's temporary directory, removed by the caller.
-func temporaryDirectory() -> URL {
-    FileManager.default.temporaryDirectory.appending(path: "devin-kick-tests-\(UUID().uuidString)", directoryHint: .isDirectory)
-}
-
-@Suite("RunStore — runs recorded at submit; the index throws, derived files warn")
+@Suite("RunStore — runs recorded at submit; the index throws, derived files warn", .temporaryDirectories)
 struct RunStoreTests {
     static func run(_ runID: String = RunStore.mintRunID(), in directory: URL) -> RunState {
         RunState(runID: runID, directory: directory, mode: "swe-2-max", title: "A title", tags: ["kick", RunStore.runTag(runID)], resumable: true)
