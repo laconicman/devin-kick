@@ -92,6 +92,9 @@ public struct DevinKick: Sendable {
             return try await body()
         } catch let error as ClientError {
             throw KickError(clientError: error)
+        } catch is CancellationError {
+            // A cancelled caller gets no answer, as a cancelled URLError reads (`init(clientError:)`).
+            throw .transport("\(operationID): cancelled")
         } catch {
             throw .decoding("\(operationID): an answer this version can't read (\(error.localizedDescription))")
         }

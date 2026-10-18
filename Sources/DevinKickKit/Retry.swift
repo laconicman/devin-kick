@@ -143,7 +143,7 @@ extension RetryMiddleware: ClientMiddleware {
             let delay: Duration
             do {
                 let (response, responseBody) = try await next(request, body, baseURL)
-                guard replayable, retry < policy.maxRetries, retryClass.retries(status: response.status.code) else {
+                guard replayable, retry < policy.maxRetries, !Task.isCancelled, retryClass.retries(status: response.status.code) else {
                     return (response, responseBody)
                 }
                 switch policy.retryAfter(response) {

@@ -170,6 +170,26 @@ struct RetryTests {
         #expect(probe.counter.pulls.withLock { $0 } == 2)
     }
 
+    /// A cancelled call is no answer (retryable), not an answer this version can't read.
+    @Test func aCancelledCallIsATransportOutcome() async throws {
+        let kick = try DevinKick.scripted(ScriptedTransport([:]))
+        await #expect(throws: KickError.transport("get_self: cancelled")) {
+            try await kick.call("get_self") { () async throws -> Int in throw CancellationError() }
+        }
+    }
+
+    /// A cancelled task doesn't retry a 429 it got back.
+    @Test func aCancelledTaskDoesNotRetryAResponse() async throws {
+        let transport = ScriptedTransport(["get_self": [.response(status: 429), .json(Fixture.selfBody)]])
+        let kick = try DevinKick.scripted(transport)
+        let task = Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            return try? await kick.whoami()
+        }
+        #expect(await task.value == nil)
+        #expect(await transport.count("get_self") == 1)
+    }
+
     @Test func validationIssuesAreQuotedWithTheirLocation() {
         let body = #"{"detail":[{"loc":["body","devin_mode"],"msg":"Input should be 'swe-2-max'","type":"enum"},{"loc":["body",0],"msg":"second"}]}"#
         let problem = ProblemMiddleware.problem(status: 422, body: Data(body.utf8))
