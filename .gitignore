@@ -1,0 +1,21 @@
+# Swift Package Manager
+.build/
+.swiftpm/
+# Package.resolved is committed on purpose: kick is a distributed executable, so the
+# tested dependency graph is pinned (Swift 6.4 re-resolves unpinned graphs).
+
+# Xcode
+*.xcodeproj/
+*.xcworkspace/
+DerivedData/
+
+# macOS
+.DS_Store
+
+# Editor
+*.swp
+.vscode/
+.idea/
+
+# GUI-install build artifacts (reproducible from desktop-extension/)
+*.mcpb
