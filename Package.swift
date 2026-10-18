@@ -40,6 +40,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.5.0"),
         // YAML round-trip for the maintainer spec tool only.
         .package(url: "https://github.com/jpsim/Yams", from: "6.0.0"),
+        // DocC catalog rendering via `swift package generate-documentation`.
+        .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0"),
     ],
     targets: [
         // Generated target: holds only the normalized openapi.yaml + the generator config.
