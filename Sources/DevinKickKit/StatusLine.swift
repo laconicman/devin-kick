@@ -123,3 +123,18 @@ extension Settlement {
         }
     }
 }
+
+extension RunState {
+    /// `run id  session id  last state  title  directory  [notes]`, from the index alone: the
+    /// state is the one at the last `save` (`status` reads the server).
+    public var line: String {
+        var fields = [
+            runID, sessionID ?? "-", lastSettlement ?? "-", Reading.oneLine(title ?? "-"), directory.path,
+        ]
+        if isOrphan { fields.append("[requested: no session found yet]") }
+        if let failure { fields.append("[not created: \(Reading.oneLine(failure))]") }
+        if !duplicates.isEmpty { fields.append("[also under its run tag: \(duplicates.joined(separator: ", "))]") }
+        if archived { fields.append("[archived]") }
+        return fields.joined(separator: "  ")
+    }
+}

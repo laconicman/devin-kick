@@ -20,6 +20,8 @@ public enum KickError: Error, Sendable, Equatable {
     /// The run store couldn't record a run: `request.json` or the index. Not retryable as is;
     /// fix the store (`KICK_STORE`, `--out`) first.
     case store(String)
+    /// The session has ended (`exit` or `error`), so a message can't reach it.
+    case ended(sessionID: String, status: String)
 
     /// The CLI exit status: sysexits-style where one fits.
     public var exitCode: Int32 {
@@ -28,7 +30,7 @@ public enum KickError: Error, Sendable, Equatable {
         case .usage: 64                      // EX_USAGE
         case .transport: 69                  // EX_UNAVAILABLE: retry
         case .server(let status, _, _) where status == 429 || status >= 500: 69
-        case .server, .decoding: 1
+        case .server, .decoding, .ended: 1
         case .store: 73                      // EX_CANTCREAT
         }
     }
@@ -49,6 +51,8 @@ extension KickError: LocalizedError {
             return "Devin answered \(status): \(code)\(detail)\(Self.hint(for: status))"
         case .decoding(let message):
             return "Devin's answer could not be read (\(message)). The vendored spec may be stale: re-vendor it with `swift run devin-spec-tool`."
+        case .ended(let sessionID, let status):
+            return "Session \(sessionID) has ended (\(status)): a reply can't reach it. Start a new session."
         }
     }
 

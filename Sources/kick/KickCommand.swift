@@ -19,7 +19,8 @@ struct KickCommand: AsyncParsableCommand {
         version: DevinKick.version,
         subcommands: [
             WhoAmI.self, UploadCommand.self, StartCommand.self, StatusCommand.self, WaitCommand.self,
-            MessagesCommand.self, SaveCommand.self,
+            MessagesCommand.self, SaveCommand.self, ReplyCommand.self, ArchiveCommand.self, UnarchiveCommand.self,
+            ListCommand.self,
         ]
     )
 }
@@ -46,6 +47,23 @@ extension DevinKick {
     static func fromEnvironment() throws(KickError) -> DevinKick {
         DevinKick(configuration: try Configuration.fromEnvironment())
     }
+}
+
+/// Runs `body` for each item and prints the line it returns. One failure is printed and doesn't
+/// stop the rest; the first one is rethrown at the end, so it sets the exit status.
+func each<Item>(
+    _ items: [Item], named name: (Item) -> String, _ body: (Item) async throws(KickError) -> String
+) async throws(KickError) {
+    var firstFailure: KickError?
+    for item in items {
+        do throws(KickError) {
+            print(try await body(item))
+        } catch {
+            printError("\(name(item)): \(error.localizedDescription)")
+            firstFailure = firstFailure ?? error
+        }
+    }
+    if let firstFailure { throw firstFailure }
 }
 
 /// Writes `kick: <message>` to stderr.

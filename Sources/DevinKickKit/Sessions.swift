@@ -187,3 +187,51 @@ extension DevinKick {
         }
     }
 }
+
+extension DevinKick {
+    /// Archives the session `argument` names, which also puts a running one to sleep; with
+    /// `terminate`, ends it first, in one `DELETE …?archive=true`. Records `archived`.
+    public func archive(_ argument: String, terminate: Bool = false) async throws(KickError) -> SessionSnapshot {
+        let sessionID = try await sessionID(of: argument)
+        let orgID = try configuration.requireOrgID()
+        let session: SessionSnapshot
+        if terminate {
+            session = SessionSnapshot(try await call(Operations.TerminateSession.id) {
+                try await client.terminateSession(path: .init(orgId: orgID, devinId: sessionID), query: .init(archive: true)).ok.body.json
+            })
+        } else {
+            session = SessionSnapshot(try await call(Operations.ArchiveSession.id) {
+                try await client.archiveSession(path: .init(orgId: orgID, devinId: sessionID)).ok.body.json
+            })
+        }
+        try await record(.archived, for: argument)
+        return session
+    }
+
+    /// Unarchives the session `argument` names. Records `unarchived`.
+    public func unarchive(_ argument: String) async throws(KickError) -> SessionSnapshot {
+        let sessionID = try await sessionID(of: argument)
+        let orgID = try configuration.requireOrgID()
+        let session = SessionSnapshot(try await call(Operations.UnarchiveSession.id) {
+            try await client.unarchiveSession(path: .init(orgId: orgID, devinId: sessionID)).ok.body.json
+        })
+        try await record(.unarchived, for: argument)
+        return session
+    }
+
+    /// Appends `kind` to the run of `argument`, if kick has one.
+    func record(_ kind: IndexEvent.Kind, for argument: String) async throws(KickError) {
+        if let run = await store.lookup(argument) {
+            try await store.append(IndexEvent(kind, run: run))
+        }
+    }
+
+    /// The server's sessions, newest first as it lists them, optionally only those tagged `tag`.
+    public func observeRemote(tagged tag: String?, limit: Int) async throws(KickError) -> [Reading] {
+        var readings: [Reading] = []
+        for session in try await listSessions(tags: tag.map { [$0] }, limit: limit) {
+            readings.append(observation(session.id, run: await store.lookup(session.id), session: session))
+        }
+        return readings
+    }
+}

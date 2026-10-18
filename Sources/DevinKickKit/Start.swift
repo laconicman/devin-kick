@@ -232,7 +232,7 @@ extension DevinKick {
         switch error {
         case .transport, .decoding: true
         case .server(let status, _, _): status >= 500
-        case .config, .usage, .store: false
+        case .config, .usage, .store, .ended: false
         }
     }
 

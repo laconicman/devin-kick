@@ -80,19 +80,16 @@ struct StartCommand: AsyncParsableCommand {
     func run() async throws {
         try await reportingKickErrors { () async throws(KickError) in
             let kick = try DevinKick.fromEnvironment()
-            var firstFailure: KickError?
-            for request in try flags.requests(kick) {
-                do throws(KickError) {
-                    let started = try await kick.start(request)
-                    print(started.line)
-                } catch {
-                    printError("\(request.title ?? request.promptFile.lastPathComponent): \(error.localizedDescription)")
-                    firstFailure = firstFailure ?? error
-                }
+            try await each(try flags.requests(kick), named: \.name) { request async throws(KickError) in
+                try await kick.start(request).line
             }
-            if let firstFailure { throw firstFailure }
         }
     }
+}
+
+extension SessionRequest {
+    /// How a failure names the request: its title, or its prompt file.
+    var name: String { title ?? promptFile.lastPathComponent }
 }
 
 extension StartedRun {

@@ -62,3 +62,35 @@ extension DevinKick {
         return last.map { Array(messages.suffix($0)) } ?? messages
     }
 }
+
+extension DevinKick {
+    /// Posts `text` (and `attach`, inside `KICK_UPLOAD_ROOTS`) to the session `argument` names,
+    /// and records a `replied` event, which makes a final output stale (``OutputVerdict``).
+    ///
+    /// The status is read first: an `exit` or `error` session gets ``KickError/ended(sessionID:status:)``
+    /// and nothing is posted (amendment A11). That check is a convenience, not a guarantee: the
+    /// status can change before the POST, whose answer is authoritative. A suspended session is
+    /// resumed by the post (the spec's `post_message`). The post's answer may lack
+    /// `structured_output`, which the spec fills only on get and list, so results are read
+    /// with a GET, never from here.
+    public func reply(_ argument: String, text: String, attach: [String] = []) async throws(KickError) {
+        let sessionID = try await sessionID(of: argument)
+        let files = try checkUploadable(attach, relativeTo: nil)
+        let current = try await session(sessionID)
+        guard !["exit", "error"].contains(current.status) else {
+            throw .ended(sessionID: sessionID, status: current.status)
+        }
+        var attachmentURLs: [String] = []
+        for file in files {
+            attachmentURLs.append(try await upload(resolved: file).url)
+        }
+        let orgID = try configuration.requireOrgID()
+        _ = try await call(Operations.PostMessage.id) {
+            try await client.postMessage(
+                path: .init(orgId: orgID, devinId: sessionID),
+                body: .json(.init(attachmentUrls: attachmentURLs.isEmpty ? nil : attachmentURLs, message: text))
+            ).ok.body.json
+        }
+        try await record(.replied, for: argument)
+    }
+}

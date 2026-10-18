@@ -21,19 +21,7 @@ struct SaveCommand: AsyncParsableCommand {
     }
 
     func run() async throws {
-        try await reportingKickErrors { () async throws(KickError) in
-            let kick = try DevinKick.fromEnvironment()
-            var firstFailure: KickError?
-            for id in ids {
-                do throws(KickError) {
-                    print(try await kick.save(id).line)
-                } catch {
-                    printError("\(id): \(error.localizedDescription)")
-                    firstFailure = firstFailure ?? error
-                }
-            }
-            if let firstFailure { throw firstFailure }
-        }
+        try await eachSession(ids) { (kick, id) async throws(KickError) in try await kick.save(id).line }
     }
 }
 

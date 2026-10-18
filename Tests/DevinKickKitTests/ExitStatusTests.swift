@@ -18,7 +18,7 @@ struct ExitStatusTests {
 
     @Test(arguments: [
         KickError.config("x"), .usage("x"), .transport("x"), .server(status: 429, code: nil, detail: "x"),
-        .server(status: 404, code: nil, detail: "x"), .decoding("x"), .store("x"),
+        .server(status: 404, code: nil, detail: "x"), .decoding("x"), .store("x"), .ended(sessionID: "x", status: "exit"),
     ])
     func everyErrorStatusIsDocumented(_ error: KickError) {
         #expect(Self.documented.contains(error.exitCode))
