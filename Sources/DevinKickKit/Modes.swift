@@ -7,7 +7,7 @@ import Foundation
 /// `SessionCreateRequest.devin_mode`. The organization's `available_devin_modes`
 /// (`GET …/automations/schemas`) is documented for automations, evaluated as the organization's
 /// automation identity, and optional in the response, so a mode missing from it only warns and
-/// the server's answer decides (``ModeCatalog``).
+/// the server's answer decides.
 public struct DevinMode: Sendable, Hashable, CustomStringConvertible {
     public let rawValue: String
 

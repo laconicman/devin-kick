@@ -49,26 +49,29 @@ rendering of `Optional[str]`. Transform 1 of `devin-spec-tool` rewrites it.
 **Discharge:** send `Upstream/devin-nullable-path-parameters.md`. When the document is fixed,
 the transform reports 0 for parameters and can be narrowed to response fields.
 
-### TD-4 — output is not proof of completion — *open*
+### TD-4 — output is not proof of completion — *discharged*
 
 Tracked in [#2](https://github.com/laconicman/devin-kick/issues/2).
 
-`structured_output` can be set while a session still works. Field use on 2026-10-14 saw partial
-output inlined for sessions in `working`. Settlement therefore trusts output only where Devin
-stopped by itself, and reports `exit` with output as `unknown` and a person's pause as input
-needed (PR #1 review, r4306484713). Two cases remain:
-- a session that reports output and then asks a question reads as done;
-- whether Devin, with `structured_output_required: true`, provides output before asking is
-  unobserved.
+`structured_output` can be set while a session still works, and the API never shows whether an
+output was meant as final: with `structured_output_required: true` the agent must provide output
+before *every* turn ends. M0 therefore trusted output only where Devin stopped by itself, and
+read `exit` with output as `unknown` (PR #1 review, r4306484713).
 
-**Cost:** with a custom schema, "waiting with output" can be a question rather than a result. And
-`kick` can't tell an interrupted session's partial output from a final one.
+**Cost (until M1):** with a custom schema, "waiting with output" could be a question; `kick`
+couldn't tell an interrupted session's partial output from a final one.
 
-**Discharge (M1):**
-- kick adds its own completion field to every schema it sends, and Settlement reads it. With the
-  default schema, a non-empty `questions_for_user` also means input needed.
-- A live check records what an asking session's output looks like, and what a terminated one's
-  does.
+**Discharge:** done in M1.
+- Every schema kick sends gains a required boolean `kick_final`, and ``Settlement`` reads an
+  ``OutputVerdict``: `final`, `stale-final` (kick replied since), `provisional` (false, or a
+  non-empty `questions_for_user`), `none`, `unmarked` (a session kick didn't create, read as M0
+  read any output). `exit` or a pause (`suspended`/`user_request`) with a final output is done.
+- The live check (2026-10-18): an asking turn *does* provide output, `kick_final: false` with the
+  question in `questions_for_user` and `answer_md` empty; after a reply the answer came back
+  final, and terminated, it read `exit` + `stale-final`, so unknown.
+- The residual, accepted by the owner: `kick_final` is the last completed turn's declaration. A
+  reply posted outside kick (in the web app), then an end or a pause mid-turn, leaves the old
+  final in place and reads as done.
 
 ### TD-5 — CI's swift.org toolchain trial — *discharged*
 
@@ -85,6 +88,55 @@ unreviewed.
 **Discharge:** done in PR #1. GitHub ships Xcode 27 as a separate image, `xcode-27`, generally
 available since 2026-10-15, whose default Xcode 27.0 (27A266a) is the local build. CI runs there
 on the image's own toolchain, with no setup step.
+
+### TD-6 — the create shield is an unstructured task — *open*
+
+Tracked in [#8](https://github.com/laconicman/devin-kick/issues/8).
+
+A start's POST and its recording must finish even when the caller is cancelled. SE-0504's
+`withTaskCancellationShield` is `@available(anyAppleOS 27.0, *)` (the Xcode 27 SDK's
+`_Concurrency.swiftinterface`), and the floor is macOS 15, so `start` runs that stretch in an
+unstructured `Task` whose value is awaited: cancelling the awaiting task doesn't propagate into it.
+
+**Cost:** an unstructured task where a structured shield would say what it means; `TODO(TD-6)` in
+`Start.swift`.
+
+**Discharge:** once the floor reaches macOS 27, use `withTaskCancellationShield`, keeping the test
+that cancels a caller mid-POST and finds the run recorded.
+
+### TD-7 — a lost create answer can still duplicate — *open (upstream)*
+
+Tracked in [#9](https://github.com/laconicman/devin-kick/issues/9).
+
+Create has no idempotency key, and the undocumented `devin_id` query parameter is ignored (probed
+live 2026-10-18: a fresh id came back server-minted in both formats, and a replay created a second
+session). After a lost answer kick lists by run tag twice, 15 s apart, before creating again
+(<doc:Design>, "Never lost; duplicates found, not prevented").
+
+**Cost:** a session that appears in the listing more than 15 s after its lost answer is duplicated.
+Nothing documents how soon a new session is listed. Duplicates are found and shown, not prevented.
+
+**Discharge:** Devin ships an idempotency key or a client-chosen session id on create, and kick
+sends it.
+
+### TD-8 — automation schemas never decode — *open (upstream)*
+
+Tracked in [#10](https://github.com/laconicman/devin-kick/issues/10).
+
+Live (2026-10-18), `GET …/automations/schemas` answers with `oncall` and `preflight_available`,
+which the published spec doesn't list, while it declares `AutomationSchemasResponse` and eight
+schemas it reaches `additionalProperties: false`. The generated decoder enforces that
+(`ensureNoAdditionalProperties`), so the answer can't be read. The published document is
+byte-identical to the vendored one, so re-vendoring changes nothing. Sessions, messages,
+attachments and pages are open and unaffected.
+
+**Cost:** the warn-only `available_devin_modes` check can never read the list; every process that
+starts a session warns once.
+
+**Discharge** (owner, 2026-10-18): a second M1 pull request adds `devin-spec-tool`'s fourth
+transform, dropping `additionalProperties: false` from every response-reachable schema in
+transform 2's walk, and merges before tag 0.2.0. The feedback for Cognition is drafted in
+`Upstream/devin-closed-automation-schemas.md`.
 
 ## See Also
 

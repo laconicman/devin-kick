@@ -5,7 +5,7 @@ import Synchronization
 /// A file attached to a session, by the user or by Devin.
 public struct SessionAttachment: Sendable, Hashable {
     public var id: String
-    /// The server's name for it; not safe as a path as is (``DevinKick/safeName(_:taken:)``).
+    /// The server's name for it; not safe as a path as is (`save` reduces it to a safe basename).
     public var name: String
     public var url: String
     public var source: String

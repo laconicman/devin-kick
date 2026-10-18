@@ -198,7 +198,7 @@ extension DevinKick {
     /// (2026-10-18) a session passed through `running/finished` and read `exit` about 4 s
     /// later, while one terminate sent a second after create answered 200, archived the session
     /// and never ended it. So a terminate is read back until `exit`, for up to
-    /// ``Timing/terminateSettle``. A sleeping session is not waited for: a terminate answers it
+    /// 15 s. A sleeping session is not waited for: a terminate answers it
     /// 200 and leaves it `suspended` (live, the same day).
     public func archive(_ argument: String, terminate: Bool = false) async throws(KickError) -> SessionSnapshot {
         let sessionID = try await sessionID(of: argument)

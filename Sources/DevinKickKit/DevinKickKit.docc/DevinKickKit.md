@@ -26,5 +26,32 @@ Credentials come from the environment: `DEVIN_API_KEY` (a `cog_` key) and `DEVIN
 
 - ``DevinKick``
 - ``Configuration``
-- ``Settlement``
 - ``KickError``
+- ``ExitStatus``
+
+### Reading a session
+
+- ``Settlement``
+- ``OutputVerdict``
+- ``Schema``
+- ``Reading``
+- ``SessionSnapshot``
+- ``WaitCondition``
+
+### Starting sessions
+
+- ``SessionRequest``
+- ``StartOptions``
+- ``StartedRun``
+- ``Manifest``
+- ``DevinMode``
+- ``Upload``
+
+### Results and the run store
+
+- ``RunStore``
+- ``RunState``
+- ``SavedRun``
+- ``Completed``
+- ``SessionMessage``
+- ``SessionAttachment``

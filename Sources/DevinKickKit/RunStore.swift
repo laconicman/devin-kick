@@ -8,8 +8,8 @@ import System
 /// - `runs/<date>-<slug>-<run id>/`: `request.json`, `session.json`, `result.json`,
 ///   `messages.json` and `attachments/`. `--out` places a run directory elsewhere; the index
 ///   stays here and records absolute paths.
-/// - `index.jsonl`: one ``IndexEvent`` per line, read once into a map by run id and session id.
-/// - `uploads.jsonl`: the upload cache (``Uploads``).
+/// - `index.jsonl`: one event per line, read once into a map by run id and session id.
+/// - `uploads.jsonl`: the upload cache (`Upload`).
 ///
 /// Two write paths: `request.json` and the index throw ``KickError/store(_:)``, because a run
 /// that isn't recorded can be lost; derived files (session, result, messages, attachments) only
