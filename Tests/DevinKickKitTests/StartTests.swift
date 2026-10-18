@@ -306,13 +306,11 @@ struct StartTests {
         #expect(throws: KickError.self) { try Configuration.fromEnvironment(["DEVIN_API_KEY": "cog_x", "KICK_MODE": "swe-3"]) }
     }
 
-    /// The list is documented for automations, so a miss, an absent list, a refusal and an
-    /// answer the closed schema can't decode (TD-8: a key the spec doesn't list) all warn.
+    /// The list is documented for automations, so a miss, an absent list and a refusal warn.
     @Test(arguments: [
         ScriptedTransport.Reply.json(Fixture.schemas(modes: ["normal"])),
         .json(Fixture.schemas(modes: nil)),
         .response(status: 403, body: Fixture.problem(status: 403, detail: "forbidden")),
-        .json(#"{"update_semantics":"merge_patch","sources":{},"available_devin_modes":["swe-2-max"],"preflight_available":true}"#),
     ])
     func availableModesOnlyWarn(_ reply: ScriptedTransport.Reply) async throws {
         let sandbox = try Sandbox()
@@ -325,6 +323,16 @@ struct StartTests {
         #expect(warnings.all.count == 1, "once per process: \(warnings.all)")
         #expect(await transport.count("get_automation_schemas") == 1)
         #expect(await transport.count("create_session") == 2)
+    }
+
+    /// The answer carries keys the spec doesn't list (live: `oncall`, `preflight_available`);
+    /// the open response schemas read it anyway (TD-8, discharged by devin-spec-tool's
+    /// transform 4).
+    @Test func automationSchemasWithUnlistedKeysDecode() async throws {
+        let transport = ScriptedTransport(["get_automation_schemas": [.json(
+            #"{"update_semantics":"merge_patch","sources":{},"available_devin_modes":["swe-2-max"],"oncall":{},"preflight_available":true}"#
+        )]])
+        #expect(try await DevinKick.scripted(transport).availableModes() == ["swe-2-max"])
     }
 
     // MARK: - Manifests

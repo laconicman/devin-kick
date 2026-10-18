@@ -485,7 +485,6 @@ components:
       title: AutomationCodeScanRepo
       type: object
     AutomationComparisonCondition:
-      additionalProperties: false
       properties:
         field:
           title: Field
@@ -507,7 +506,6 @@ components:
       title: AutomationComparisonCondition
       type: object
     AutomationConcurrency:
-      additionalProperties: false
       properties:
         max_concurrent_runs:
           minimum: 1.0
@@ -531,7 +529,6 @@ components:
       title: AutomationConcurrency
       type: object
     AutomationConditionGroup:
-      additionalProperties: false
       properties:
         all:
           description: 'AND: every condition in the group must match.'
@@ -591,7 +588,6 @@ components:
       title: AutomationConditions
       type: object
     AutomationConditions-Output:
-      additionalProperties: false
       properties:
         any:
           description: OR of AND-groups (fixed two-level DNF).
@@ -714,7 +710,6 @@ components:
       title: AutomationCreateRequest
       type: object
     AutomationEmailNotification:
-      additionalProperties: false
       properties:
         recipients:
           items:
@@ -733,7 +728,6 @@ components:
       title: AutomationEmailNotification
       type: object
     AutomationEmptyCondition:
-      additionalProperties: false
       description: 'Unary operator: matches on the field''s emptiness; `value` carries
         no data.'
       properties:
@@ -752,7 +746,6 @@ components:
       title: AutomationEmptyCondition
       type: object
     AutomationEventSchemaResponse:
-      additionalProperties: false
       properties:
         category:
           title: Category
@@ -785,7 +778,6 @@ components:
       title: AutomationEventSchemaResponse
       type: object
     AutomationGlobCondition:
-      additionalProperties: false
       properties:
         field:
           title: Field
@@ -806,7 +798,6 @@ components:
       title: AutomationGlobCondition
       type: object
     AutomationHostnameDestination:
-      additionalProperties: false
       properties:
         hostname:
           title: Hostname
@@ -816,7 +807,6 @@ components:
       title: AutomationHostnameDestination
       type: object
     AutomationInvocationLimits:
-      additionalProperties: false
       properties:
         max_per_window:
           minimum: 1.0
@@ -832,7 +822,6 @@ components:
       title: AutomationInvocationLimits
       type: object
     AutomationIpv4Destination:
-      additionalProperties: false
       properties:
         ipv4:
           title: Ipv4
@@ -842,7 +831,6 @@ components:
       title: AutomationIpv4Destination
       type: object
     AutomationIpv6Destination:
-      additionalProperties: false
       properties:
         ipv6:
           title: Ipv6
@@ -852,7 +840,6 @@ components:
       title: AutomationIpv6Destination
       type: object
     AutomationLastInvocation:
-      additionalProperties: false
       properties:
         fired_at:
           title: Fired At
@@ -868,7 +855,6 @@ components:
       title: AutomationLastInvocation
       type: object
     AutomationLimits:
-      additionalProperties: false
       properties:
         invocations:
           $ref: '#/components/schemas/AutomationInvocationLimits'
@@ -884,7 +870,6 @@ components:
       title: AutomationLimits
       type: object
     AutomationListCondition:
-      additionalProperties: false
       properties:
         field:
           title: Field
@@ -929,7 +914,6 @@ components:
       title: AutomationLlmCheckRequest
       type: object
     AutomationMatchCondition:
-      additionalProperties: false
       properties:
         field:
           title: Field
@@ -948,7 +932,6 @@ components:
       title: AutomationMatchCondition
       type: object
     AutomationMessageSessionAction:
-      additionalProperties: false
       properties:
         auto_create:
           default: false
@@ -1014,7 +997,6 @@ components:
       title: AutomationMessageSessionActionUpdate
       type: object
     AutomationMonitorSessionAction:
-      additionalProperties: false
       properties:
         setup_prompt:
           description: Injected into the session's system prompt. Same reference-token
@@ -1058,7 +1040,6 @@ components:
       title: AutomationMonitorSessionActionUpdate
       type: object
     AutomationNetPolicy:
-      additionalProperties: false
       properties:
         allow:
           items:
@@ -1073,7 +1054,6 @@ components:
       title: AutomationNetPolicy
       type: object
     AutomationNotifications:
-      additionalProperties: false
       properties:
         email:
           $ref: '#/components/schemas/AutomationEmailNotification'
@@ -1082,7 +1062,6 @@ components:
       title: AutomationNotifications
       type: object
     AutomationNumericCondition:
-      additionalProperties: false
       properties:
         field:
           title: Field
@@ -1149,7 +1128,6 @@ components:
       title: AutomationPreflightRequest
       type: object
     AutomationRangeCondition:
-      additionalProperties: false
       properties:
         field:
           title: Field
@@ -1204,7 +1182,6 @@ components:
       title: AutomationReadinessScanAction
       type: object
     AutomationRecurrenceCondition:
-      additionalProperties: false
       properties:
         field:
           title: Field
@@ -1240,7 +1217,6 @@ components:
       title: AutomationRemediateFindingAction
       type: object
     AutomationReply:
-      additionalProperties: false
       properties:
         type:
           description: 'notify_thread: dispatch-time one-way ''session started'' breadcrumb
@@ -1254,7 +1230,6 @@ components:
       title: AutomationReply
       type: object
     AutomationResponse:
-      additionalProperties: false
       properties:
         actions:
           items:
@@ -1383,7 +1358,6 @@ components:
       title: AutomationResponse
       type: object
     AutomationRunAsCreator:
-      additionalProperties: false
       properties:
         type:
           const: creator
@@ -1393,7 +1367,6 @@ components:
       title: AutomationRunAsCreator
       type: object
     AutomationRunAsOrganization:
-      additionalProperties: false
       properties:
         type:
           const: organization
@@ -1403,7 +1376,6 @@ components:
       title: AutomationRunAsOrganization
       type: object
     AutomationRunAsServiceUser:
-      additionalProperties: false
       properties:
         service_user_id:
           title: Service User Id
@@ -1452,7 +1424,6 @@ components:
       title: AutomationScanNewCommitsActionUpdate
       type: object
     AutomationSchemaFieldDef:
-      additionalProperties: false
       description: 'Flattened view of a condition field definition.
 
 
@@ -1522,7 +1493,6 @@ components:
       title: AutomationSchemaFieldDef
       type: object
     AutomationSchemaSelectOption:
-      additionalProperties: false
       properties:
         label:
           title: Label
@@ -1536,7 +1506,6 @@ components:
       title: AutomationSchemaSelectOption
       type: object
     AutomationSchemasResponse:
-      additionalProperties: false
       properties:
         available_devin_modes:
           description: 'Modes session_settings.devin_mode accepts for a new selection
@@ -1591,7 +1560,6 @@ components:
       title: AutomationSchemasResponse
       type: object
     AutomationSchemasSecurityProfile:
-      additionalProperties: false
       description: 'The security profile that governs this organization''s automation
 
         sessions (enterprise, organization, or automations default binding).'
@@ -1622,7 +1590,6 @@ components:
       title: AutomationSchemasSecurityProfile
       type: object
     AutomationSecurityProfileResponse:
-      additionalProperties: false
       properties:
         profile_id:
           type:
@@ -1712,7 +1679,6 @@ components:
       title: AutomationSessionConfig
       type: object
     AutomationSessionConfig-Output:
-      additionalProperties: false
       properties:
         bypass_approval:
           default: false
@@ -1755,7 +1721,6 @@ components:
       title: AutomationSessionConfig
       type: object
     AutomationSessionNotificationsConfig:
-      additionalProperties: false
       description: 'Where the spawned session''s content goes, as opposed to the
 
         automation-level ``notifications`` group (dispatch-status pings).'
@@ -1808,7 +1773,6 @@ components:
       title: AutomationSessionSettings
       type: object
     AutomationSessionSettings-Output:
-      additionalProperties: false
       description: 'Applied to every session this automation spawns (including monitor
 
         sessions).'
@@ -1835,7 +1799,6 @@ components:
       title: AutomationSessionSettings
       type: object
     AutomationSessionSlackConfig:
-      additionalProperties: false
       properties:
         channel_id:
           title: Channel Id
@@ -1855,7 +1818,6 @@ components:
       title: AutomationSessionSlackConfig
       type: object
     AutomationSessionTeamsConfig:
-      additionalProperties: false
       properties:
         channel_id:
           description: Conversation id of a channel in that team.
@@ -1872,7 +1834,6 @@ components:
       title: AutomationSessionTeamsConfig
       type: object
     AutomationSlackChannel:
-      additionalProperties: false
       properties:
         channel_id:
           title: Channel Id
@@ -1886,7 +1847,6 @@ components:
       title: AutomationSlackChannel
       type: object
     AutomationSlackMonitorConfig:
-      additionalProperties: false
       properties:
         source_channel_id:
           title: Source Channel Id
@@ -1901,7 +1861,6 @@ components:
       title: AutomationSlackMonitorConfig
       type: object
     AutomationSlackNotification:
-      additionalProperties: false
       properties:
         channel_id:
           title: Channel Id
@@ -2017,7 +1976,6 @@ components:
       title: AutomationStartSessionAction
       type: object
     AutomationStartSessionAction-Output:
-      additionalProperties: false
       properties:
         prompt:
           description: 'The single source of truth: plain text with inline reference
@@ -2063,7 +2021,6 @@ components:
       title: AutomationStartSessionActionUpdate
       type: object
     AutomationStringCondition:
-      additionalProperties: false
       properties:
         field:
           title: Field
@@ -2081,7 +2038,6 @@ components:
       title: AutomationStringCondition
       type: object
     AutomationTeamsChannel:
-      additionalProperties: false
       properties:
         channel_id:
           description: Teams channel id ('19:...@thread.tacv2'), or '*'.
@@ -2097,7 +2053,6 @@ components:
       title: AutomationTeamsChannel
       type: object
     AutomationTemplateResponse:
-      additionalProperties: false
       properties:
         actions:
           items:
@@ -2161,7 +2116,6 @@ components:
       title: AutomationTemplateResponse
       type: object
     AutomationTemplatesResponse:
-      additionalProperties: false
       properties:
         templates:
           items:
@@ -2173,7 +2127,6 @@ components:
       title: AutomationTemplatesResponse
       type: object
     AutomationTools:
-      additionalProperties: false
       properties:
         jira_projects:
           items:
@@ -2391,7 +2344,6 @@ components:
       title: AutomationTriggerRequest
       type: object
     AutomationTriggerRequest-Output:
-      additionalProperties: false
       properties:
         conditions:
           $ref: '#/components/schemas/AutomationConditions-Output'
@@ -2416,7 +2368,6 @@ components:
       title: AutomationTriggerRequest
       type: object
     AutomationTriggerResponse:
-      additionalProperties: false
       properties:
         conditions:
           $ref: '#/components/schemas/AutomationConditions-Output'
@@ -2559,7 +2510,6 @@ components:
       title: AutomationUpdateRequest
       type: object
     AutomationWebhookResponse:
-      additionalProperties: false
       properties:
         secret:
           type:
@@ -8339,7 +8289,7 @@ info:
   title: Devin API v3
   version: 3.0.0
   x-devin-kick:
-    source: https://docs.devin.ai/v3-openapi.yaml (via raw.yaml)
+    source: https://docs.devin.ai/v3-openapi.yaml
     sha256: 90e117abe4b2b6e58f692b95cbe5799bbc99a44507b608b274a627ae211c8d28
     vendored: 2026-10-18
 openapi: 3.1.0

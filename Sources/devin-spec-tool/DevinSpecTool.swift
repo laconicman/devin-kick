@@ -20,8 +20,13 @@ import Yams
 ///  3. Operation ids — `handle_create_session_v3_organizations__org_id__sessions_post` becomes
 ///     `create_session` (idiomatic: `createSession`); an enterprise twin gets `enterprise_`, and a
 ///     name that would still collide keeps its original id.
+///  4. Open response schemas — `additionalProperties: false` is dropped from every schema
+///     reachable from a response, in transform 2's walk, so a field Devin adds later can't fail
+///     decoding either: the generator enforces it (`ensureNoAdditionalProperties`), and live
+///     (2026-10-18) the automation schemas carried two fields the document doesn't list (TD-8).
+///     Request-side schemas stay closed.
 ///
-/// All three are idempotent: a second run over the output reports `0 / 0 / 0 / 0`.
+/// All four are idempotent: a second run over the output reports `0 / 0 / 0 / 0 / 0`.
 @main
 struct DevinSpecTool {
     static let specURL = URL(string: "https://docs.devin.ai/v3-openapi.yaml")!
@@ -31,6 +36,7 @@ struct DevinSpecTool {
         var nullables = 0
         var unrequired = 0
         var responseEnums = 0
+        var openedSchemas = 0
         var renamed = 0
     }
 
@@ -68,7 +74,7 @@ struct DevinSpecTool {
 
         var stats = Stats()
         root = collapseNullables(root, stats: &stats)
-        root = stringifyResponseEnums(root, stats: &stats)
+        root = normalizeResponseSchemas(root, stats: &stats)
         root = shortenOperationIDs(root, stats: &stats)
         if let source {
             root = stamp(root, source: source, sha256: sha256(raw))
@@ -81,6 +87,7 @@ struct DevinSpecTool {
           nullable anyOf collapsed:  \(stats.nullables)
           properties made optional:  \(stats.unrequired)
           response enums stringified: \(stats.responseEnums)
+          response schemas opened:   \(stats.openedSchemas)
           operation ids shortened:   \(stats.renamed)
         """)
     }
@@ -182,9 +189,11 @@ struct DevinSpecTool {
         return map.count == 1 && map["type"]?.string == "null"
     }
 
-    // MARK: Transform 2 — response enums
+    // MARK: Transforms 2 and 4 — response enums, closed response schemas
 
-    static func stringifyResponseEnums(_ root: Node, stats: inout Stats) -> Node {
+    /// Walks every schema reachable from a response, inline or by reference, and applies
+    /// transforms 2 and 4 to it (``normalizingResponse(_:stats:)``).
+    static func normalizeResponseSchemas(_ root: Node, stats: inout Stats) -> Node {
         guard case .mapping(var rootMap) = root else { return root }
 
         // Inline response schemas, and the names of every component schema they reach.
@@ -196,7 +205,7 @@ struct DevinSpecTool {
                     guard case .mapping(var operation)? = item[method],
                           let responses = operation["responses"] else { continue }
                     collectSchemaRefs(responses, into: &reached)
-                    operation["responses"] = strippingEnums(responses, stats: &stats)
+                    operation["responses"] = normalizingResponse(responses, stats: &stats)
                     item[method] = .mapping(operation)
                 }
                 paths[pathKey] = .mapping(item)
@@ -222,31 +231,37 @@ struct DevinSpecTool {
         }
         for name in reached {
             guard let schema = schemas[name] else { continue }
-            schemas[name] = strippingEnums(schema, stats: &stats)
+            schemas[name] = normalizingResponse(schema, stats: &stats)
         }
         components["schemas"] = .mapping(schemas)
         rootMap["components"] = .mapping(components)
         return .mapping(rootMap)
     }
 
-    /// Drops `enum` from every string (or untyped) schema in `node`'s subtree.
-    static func strippingEnums(_ node: Node, stats: inout Stats) -> Node {
+    /// In `node`'s subtree, drops `enum` from every string (or untyped) schema (transform 2) and
+    /// `additionalProperties: false` from every schema (transform 4). An `additionalProperties`
+    /// that is a schema, or `true`, stays: only the boolean `false` closes an object.
+    static func normalizingResponse(_ node: Node, stats: inout Stats) -> Node {
         switch node {
         case .scalar, .alias:
             return node
         case .sequence(var seq):
-            for i in seq.indices { seq[i] = strippingEnums(seq[i], stats: &stats) }
+            for i in seq.indices { seq[i] = normalizingResponse(seq[i], stats: &stats) }
             return .sequence(seq)
         case .mapping(var map):
             for key in Array(map.keys) where key.string != "enum" {
                 guard let value = map[key] else { continue }
-                map[key] = strippingEnums(value, stats: &stats)
+                map[key] = normalizingResponse(value, stats: &stats)
             }
             let type = map["type"]?.string
             if map["enum"] != nil, type == nil || type == "string" {
                 map["enum"] = nil
                 if type == nil { map["type"] = "string" }
                 stats.responseEnums += 1
+            }
+            if map["additionalProperties"]?.bool == false {
+                map["additionalProperties"] = nil
+                stats.openedSchemas += 1
             }
             return .mapping(map)
         }
