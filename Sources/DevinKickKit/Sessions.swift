@@ -55,7 +55,7 @@ extension DevinKick {
     /// The session id `argument` (a session id, run id or run directory) names: a usage error
     /// for a run that has no session.
     public func sessionID(of argument: String) async throws(KickError) -> String {
-        let run = await store.lookup(argument)
+        let run = try await resolvedRun(argument)
         guard let sessionID = run?.sessionID ?? (run == nil ? argument : nil) else {
             throw .usage("Run \(argument) has no session: \(run?.failure ?? "its create's answer was lost, and no session carries its run tag").")
         }
@@ -63,12 +63,23 @@ extension DevinKick {
     }
 
     /// Reads where `argument` (a session id, run id or run directory) stands.
+    /// The run `argument` names, if the store knows it. Named directly, a run without a session
+    /// checks its tag first, so every command finds a session listed late (TD-7), even after a
+    /// sweep stopped looking. A listing that fails throws; it never reads as "no session" (PR #11
+    /// review, r4308715032 and r4308715162).
+    func resolvedRun(_ argument: String) async throws(KickError) -> RunState? {
+        let run = await store.lookup(argument)
+        guard let run, run.awaitsSession else { return run }
+        return try await reconcile(run)
+    }
+
     public func observe(_ argument: String) async -> Reading {
-        var run = await store.lookup(argument)
-        if let pending = run, pending.awaitsSession {
-            // Named directly, a run without a session checks its tag again: a session listed late
-            // (TD-7) still turns up, even after a sweep stopped looking.
-            run = (try? await reconcile(pending)) ?? pending
+        let run: RunState?
+        do throws(KickError) {
+            run = try await resolvedRun(argument)
+        } catch {
+            // The lookup failed, so nothing is known: a 429 or 5xx is polled again by `wait`.
+            return Reading(argument: argument, run: await store.lookup(argument), session: nil, verdict: nil, outcome: .unreadable(error))
         }
         guard let sessionID = run?.sessionID ?? (run == nil ? argument : nil) else {
             return Self.reading(argument, unstartedRun: run)

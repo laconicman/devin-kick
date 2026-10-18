@@ -82,6 +82,26 @@ struct StatusTests {
         #expect(await kick.observe("20261018-120000-0002").outcome.label == "failed")
     }
 
+    /// A run whose create answer was lost resolves through its tag for every command, and a
+    /// failed listing is the error it was, not "no session" (PR #11 review, r4308715032 and
+    /// r4308715162).
+    @Test func aPendingRunResolvesThroughItsTagOrReportsTheListingError() async throws {
+        let runID = "20261018-120000-0003"
+        let transport = ScriptedTransport(["get_sessions": [.response(status: 503)]])
+        let kick = try Self.kick(transport)
+        let orphan = RunState(runID: runID, directory: temporaryDirectory(), mode: nil, title: nil, tags: [RunStore.runTag(runID)], resumable: true)
+        try await kick.store.append(IndexEvent(.requested, run: orphan))
+
+        let unreadable = await kick.observe(runID)
+        #expect(unreadable.isUnreadable && !unreadable.isSettled, "a 503 is transient: wait polls it again")
+        await #expect(throws: KickError.self) { try await kick.sessionID(of: runID) }
+
+        await transport.script("get_sessions", [.dynamic { sent in
+            .json(Fixture.page([Fixture.session(id: Self.idA, tags: Fixture.queriedTags(sent))]))
+        }])
+        #expect(try await kick.sessionID(of: runID) == Self.idA)
+    }
+
     @Test(arguments: [(true as Bool?, "[past the 14-day resume window]"), (nil, "[resumable: unknown, past 14 days]")])
     func aSleepingSessionPastTheResumeWindowIsFlagged(_ resumable: Bool?, flag: String) async throws {
         let session = Fixture.session(id: Self.idA, status: "suspended", detail: "inactivity", output: Self.finalOutput)

@@ -167,7 +167,8 @@ struct SaveTests {
     }
 
     @Test func aRunWithoutASessionCannotBeSaved() async throws {
-        let kick = try DevinKick.scripted(ScriptedTransport([:]))
+        // Its tag is checked first; nothing carries it.
+        let kick = try DevinKick.scripted(ScriptedTransport(["get_sessions": [.json(Fixture.page([]))]]))
         let orphan = RunState(runID: "20261018-120000-0001", directory: temporaryDirectory(), mode: nil, title: nil, tags: [], resumable: true)
         try await kick.store.append(IndexEvent(.requested, run: orphan))
         await #expect { try await kick.save(orphan.runID) } throws: { ($0 as? KickError)?.exitCode == 64 }
