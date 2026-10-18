@@ -174,6 +174,19 @@ struct StatusTests {
         #expect(Reading.exitCode(readings) == 69)
     }
 
+    /// One hung session doesn't starve the others: each round reads them at once (from the
+    /// 2026-10-18 diff review through kick).
+    @Test(.timeLimit(.minutes(1)))
+    func aHungSessionDoesNotStarveTheOthers() async throws {
+        let transport = ScriptedTransport(["get_session": [.dynamic { sent in
+            sent.request.path?.contains(Self.idA) == true
+                ? .delayed(.seconds(30), .json(Fixture.session(id: Self.idA)))
+                : .json(Fixture.session(id: Self.idB, detail: "waiting_for_user", output: Self.finalOutput))
+        }]])
+        let readings = try await Self.kick(transport).wait([Self.idA, Self.idB], timeout: .milliseconds(500))
+        #expect(readings.map(\.outcome.label) == ["error", "done"])
+    }
+
     @Test(arguments: [Duration.zero, .seconds(241)])
     func aWaitOutsideItsBoundIsAUsageError(_ timeout: Duration) async throws {
         await #expect(throws: KickError.self) { try await Self.kick(ScriptedTransport([:])).wait(["x"], timeout: timeout) }

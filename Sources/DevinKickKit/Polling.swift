@@ -64,8 +64,9 @@ extension DevinKick {
             failures[index] = reading.isSettled || !reading.isUnreadable ? 0 : failures[index] + 1
             readings[index] = reading
         }
-        for (index, argument) in arguments.enumerated() {
-            let reading = await observe(argument, within: deadline - timing.now())
+        // Each round reads its sessions at once, so one hung GET can't use up the budget of the
+        // ones after it (from the 2026-10-18 diff review through kick).
+        for (index, reading) in await observe(arguments, at: Array(arguments.indices), until: deadline) {
             progress?(reading)
             readings.append(reading)
             record(reading, at: index)
@@ -76,15 +77,29 @@ extension DevinKick {
             guard remaining > .zero else { break }
             try? await timing.sleep(min(timing.polling.interval(before: poll), remaining))
             poll += 1
-            for index in readings.indices where !done(index) {
-                let budget = deadline - timing.now()
-                guard budget > .zero else { break }
-                let reading = await observe(arguments[index], within: budget)
+            guard deadline - timing.now() > .zero else { break }
+            let pending = readings.indices.filter { !done($0) }
+            for (index, reading) in await observe(arguments, at: pending, until: deadline) {
                 if reading.outcome.label != readings[index].outcome.label { progress?(reading) }
                 record(reading, at: index)
             }
         }
         return readings
+    }
+
+    /// Reads `arguments[indices]` at once, each raced against what is left until `deadline`,
+    /// and returns them in `indices`' order.
+    func observe(_ arguments: [String], at indices: [Int], until deadline: ContinuousClock.Instant) async -> [(Int, Reading)] {
+        let budget = deadline - timing.now()
+        let results = await withTaskGroup(of: (Int, Reading).self) { group in
+            for index in indices {
+                group.addTask { (index, await observe(arguments[index], within: budget)) }
+            }
+            var results: [Int: Reading] = [:]
+            for await (index, reading) in group { results[index] = reading }
+            return results
+        }
+        return indices.compactMap { index in results[index].map { (index, $0) } }
     }
 
     static func satisfied(_ condition: WaitCondition, _ done: [Bool]) -> Bool {
@@ -107,7 +122,7 @@ extension DevinKick {
             if let first = await group.next() ?? nil { return first }
             return Reading(
                 argument: argument, run: await store.lookup(argument), session: nil, verdict: nil,
-                outcome: .unreadable(.transport("no answer within the wait's remaining \(budget.components.seconds) s"))
+                outcome: .unreadable(.transport("no answer before the wait ran out"))
             )
         }
     }
