@@ -109,6 +109,22 @@ struct UploadTests {
         #expect(await transport.count("upload_attachment") == 0)
     }
 
+    /// The cache is the organization's and the server's: the same file under another
+    /// `DEVIN_ORG_ID` over one store is uploaded again (PR #11 review, r4308715119).
+    @Test func anotherOrganizationDoesNotGetTheCachedURL() async throws {
+        let sandbox = try Sandbox()
+        defer { sandbox.remove() }
+        let store = sandbox.base.appending(path: "store").path
+        let transport = ScriptedTransport(["upload_attachment": [.json(Self.uploaded)]])
+        let environment = ["KICK_UPLOAD_ROOTS": sandbox.root.path, "KICK_STORE": store]
+        let first = try DevinKick.scripted(transport, environment: environment.merging(["DEVIN_ORG_ID": "org-a"]) { $1 })
+        #expect(try await first.upload(["notes.txt"], relativeTo: sandbox.root).map(\.cached) == [false])
+        #expect(try await first.upload(["notes.txt"], relativeTo: sandbox.root).map(\.cached) == [true])
+        let second = try DevinKick.scripted(transport, environment: environment.merging(["DEVIN_ORG_ID": "org-b"]) { $1 })
+        #expect(try await second.upload(["notes.txt"], relativeTo: sandbox.root).map(\.cached) == [false])
+        #expect(await transport.count("upload_attachment") == 2)
+    }
+
     @Test func aDirectoryIsNotAFile() async throws {
         let sandbox = try Sandbox()
         defer { sandbox.remove() }

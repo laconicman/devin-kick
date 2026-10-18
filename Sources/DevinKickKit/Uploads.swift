@@ -60,20 +60,33 @@ struct UploadRoots: Sendable {
 
 /// The upload cache, `uploads.jsonl` in the run store: one line per upload.
 actor UploadCache {
+    /// One upload. The URL is the organization's, on that server: the scope is part of the key,
+    /// so changing `DEVIN_ORG_ID` or `KICK_SERVER_URL` over one store uploads again rather than
+    /// handing out another organization's URL (PR #11 review, r4308715119). An entry recorded
+    /// without a scope never matches.
     struct Entry: Codable, Sendable {
         var sha256: String
         var name: String
         var url: String
         var attachmentID: String
+        var org: String?
+        var server: String?
         var timestamp: Date
 
         enum CodingKeys: String, CodingKey {
-            case sha256, name, url
+            case sha256, name, url, org, server
             case attachmentID = "attachment_id"
             case timestamp = "ts"
         }
 
-        var key: String { "\(sha256)/\(name)" }
+        var key: String? {
+            guard let org, let server else { return nil }
+            return Self.key(sha256: sha256, name: name, org: org, server: server)
+        }
+
+        static func key(sha256: String, name: String, org: String, server: String) -> String {
+            [server, org, sha256, name].joined(separator: "\n")
+        }
     }
 
     let url: URL
@@ -85,21 +98,23 @@ actor UploadCache {
         self.warn = warn
     }
 
-    func lookup(sha256: String, name: String) -> Entry? {
+    func lookup(sha256: String, name: String, org: String, server: String) -> Entry? {
         if entries == nil {
             entries = [:]
             let lines = (try? Data(contentsOf: url))?.split(separator: UInt8(ascii: "\n")) ?? []
             for line in lines {
-                if let entry = try? RunStore.decoder.decode(Entry.self, from: line) { entries?[entry.key] = entry }
+                if let entry = try? RunStore.decoder.decode(Entry.self, from: line), let key = entry.key {
+                    entries?[key] = entry
+                }
             }
         }
-        return entries?["\(sha256)/\(name)"]
+        return entries?[Entry.key(sha256: sha256, name: name, org: org, server: server)]
     }
 
     /// Records an upload. A failure only warns: the file is uploaded either way, and a lost
     /// entry costs a second upload of the same content later.
     func record(_ entry: Entry) {
-        entries?[entry.key] = entry
+        if let key = entry.key { entries?[key] = entry }
         do {
             try RunStore.createPrivateDirectory(url.deletingLastPathComponent())
             try RunStore.appendLine(try RunStore.encoder.encode(entry), to: url)
@@ -150,10 +165,11 @@ extension DevinKick {
         let data = try Self.readWithoutFollowing(checked)
         let name = file.lastPathComponent
         let sha256 = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
-        if let entry = await uploads.lookup(sha256: sha256, name: name) {
+        let orgID = try configuration.requireOrgID()
+        let server = configuration.serverURL.absoluteString
+        if let entry = await uploads.lookup(sha256: sha256, name: name, org: orgID, server: server) {
             return Upload(file: file, url: entry.url, cached: true)
         }
-        let orgID = try configuration.requireOrgID()
         // A part over in-memory `Data`, in an array: both re-iterable (`.multiple`), so a 429 can
         // be retried by `RetryMiddleware`.
         let response = try await call(Operations.UploadAttachment.id) {
@@ -162,7 +178,10 @@ extension DevinKick {
                 body: .multipartForm([.file(.init(payload: .init(body: HTTPBody(data)), filename: name))])
             ).ok.body.json
         }
-        await uploads.record(.init(sha256: sha256, name: name, url: response.url, attachmentID: response.attachmentId, timestamp: Date()))
+        await uploads.record(.init(
+            sha256: sha256, name: name, url: response.url, attachmentID: response.attachmentId,
+            org: orgID, server: server, timestamp: Date()
+        ))
         return Upload(file: file, url: response.url, cached: false)
     }
 }
