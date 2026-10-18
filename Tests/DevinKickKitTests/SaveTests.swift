@@ -78,7 +78,7 @@ struct SaveTests {
     /// presigned hop of the attachment download carries no `Authorization`.
     @Test func saveWritesEveryFileAndStripsTheKeyOnTheRedirect() async throws {
         let api = "api-\(UUID().uuidString.lowercased()).test"
-        let presigned = "s3-\(UUID().uuidString.lowercased()).test"
+        let presigned = "bucket-\(UUID().uuidString.lowercased()).s3.us-west-2.amazonaws.com"
         RedirectingURLProtocol.routes.withLock {
             $0[api] = .init(location: URL(string: "https://\(presigned)/bucket/\(Self.attachmentID)?X-Amz-Signature=x"))
             $0[presigned] = .init(body: Data("attachment bytes".utf8))
@@ -147,16 +147,18 @@ struct SaveTests {
         #expect(try FileManager.default.contentsOfDirectory(atPath: directory.path) == ["report.txt"])
     }
 
-    /// The download follows only https host names (PR #11 review, r4308715368).
+    /// The download follows only https into the service's own domains (PR #11 review,
+    /// r4308715368, and its edit: a public-looking name can resolve to an internal address).
     @Test(arguments: [
         ("https://devin-public-attachments.s3.dualstack.us-west-2.amazonaws.com/a/b?X-Amz-Signature=x", true),
-        ("https://s3-0.test/bucket/x", true),
+        ("https://proxy.devin.ai/attachments/x", true),
         ("http://devin-public-attachments.s3.amazonaws.com/a", false),
         ("https://169.254.169.254/latest/meta-data", false),
         ("https://[fd00::1]/x", false),
         ("https://localhost/x", false),
-        ("https://printer.local/x", false),
-        ("https://metadata.google.internal/x", false),
+        ("https://rebind.example.com/x", false),
+        ("https://evil-amazonaws.com/x", false),
+        ("https://amazonaws.com.evil.net/x", false),
     ])
     func onlyHTTPSHostNamesAreFollowed(_ location: String, follows: Bool) throws {
         #expect(StripAuthorizationOnRedirect.mayFollow(try #require(URL(string: location))) == follows)
@@ -173,7 +175,7 @@ struct SaveTests {
         await #expect {
             try await kick.download(attachment, to: temporaryDirectory().appending(path: "notes.txt"))
         } throws: { error in
-            (error as? KickError)?.localizedDescription.contains("only https host names are followed") == true
+            (error as? KickError)?.localizedDescription.contains("only https into amazonaws.com or devin.ai is followed") == true
         }
         #expect(RedirectingURLProtocol.requests(to: "169.254.169.254").isEmpty)
     }

@@ -314,8 +314,11 @@ uuid, and a user's upload is listed with `source: user`.
 - A redirect delegate removes `Authorization` before the hop. That is required, not hygiene: the
   presigned URL answers 400 to a request carrying it (live). URLSession on macOS 26 already drops
   it on this cross-host redirect (measured); the delegate keeps it so whatever the OS does. It
-  follows only `https` to a host name, never an IP literal, `localhost` or a local or internal
-  name, so a compromised endpoint can't point the client at internal services.
+  follows only `https` into the service's own domains, `amazonaws.com` (S3, as measured) and
+  `devin.ai`, since a check of the name can't stop a public-looking name that resolves to an
+  internal address. The spec's second destination, an IP-enforcing presigned proxy for
+  organizations with an IP allowlist, has no documented host; it is assumed under `devin.ai`, and
+  if it isn't, the download fails saying where it pointed.
 - The server's name is sent as one percent-encoded segment, so `../x` can't become dot-segments,
   and saved as a safe basename (no separators, no `..`, no leading dot, capped, numbered if
   taken); a changed name is recorded in the index.

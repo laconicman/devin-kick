@@ -50,18 +50,20 @@ final class StripAuthorizationOnRedirect: NSObject, URLSessionTaskDelegate, Send
     /// A redirect the delegate declined to follow, if any.
     let refused = Mutex<URL?>(nil)
 
-    /// Host names that never belong to a presigned download: local or internal.
-    static let localSuffixes = [".local", ".localhost", ".internal", ".home.arpa"]
+    /// The domains a download may be redirected into. Live (2026-10-18) the hop went to
+    /// `devin-public-attachments.s3.dualstack.us-west-2.amazonaws.com`. The spec names one more
+    /// destination, "the IP-enforcing presigned proxy" for organizations with an IP allowlist,
+    /// without its host; it is assumed to be under `devin.ai`, and if it isn't, the download
+    /// fails saying where it pointed.
+    static let redirectDomains = ["amazonaws.com", "devin.ai"]
 
-    /// Whether a redirect may be followed: `https`, to a host *name*. Live, the hop goes to S3
-    /// (or an organization's IP-enforcing proxy); an IP literal, `localhost` or a local name
-    /// would let a compromised endpoint point the client at internal services (PR #11 review,
-    /// r4308715368).
+    /// Whether a redirect may be followed: `https`, into one of ``redirectDomains``. A check of
+    /// the name alone can't stop a public-looking name that resolves to an internal address,
+    /// since URLSession resolves it afterwards; the service's own domains can (PR #11 review,
+    /// r4308715368, as edited).
     static func mayFollow(_ url: URL) -> Bool {
-        guard url.scheme?.lowercased() == "https", let host = url.host()?.lowercased(), !host.isEmpty else { return false }
-        let isIPv4 = host.allSatisfy { $0.isNumber || $0 == "." }
-        let isIPv6 = host.contains(":")
-        return !isIPv4 && !isIPv6 && host != "localhost" && !localSuffixes.contains(where: host.hasSuffix)
+        guard url.scheme?.lowercased() == "https", let host = url.host()?.lowercased() else { return false }
+        return redirectDomains.contains { host == $0 || host.hasSuffix("." + $0) }
     }
 }
 
@@ -138,7 +140,7 @@ extension DevinKick {
                 let (file, response) = try await session.download(for: request)
                 let status = (response as? HTTPURLResponse)?.statusCode ?? 0
                 if let refused = delegate.refused.withLock({ $0 }) {
-                    throw KickError.server(status: status, code: nil, detail: "the download redirected to \(refused.host() ?? "an unnamed host") over \(refused.scheme ?? "no scheme"); only https host names are followed")
+                    throw KickError.server(status: status, code: nil, detail: "the download redirected to \(refused.host() ?? "an unnamed host") over \(refused.scheme ?? "no scheme"); only https into \(StripAuthorizationOnRedirect.redirectDomains.joined(separator: " or ")) is followed")
                 }
                 if (200..<300).contains(status) {
                     try Self.move(file, to: destination)

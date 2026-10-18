@@ -25,7 +25,8 @@ final class RedirectingURLProtocol: URLProtocol {
         return configuration
     }
 
-    override class func canInit(with request: URLRequest) -> Bool { request.url?.host()?.hasSuffix(".test") == true }
+    /// Registered only in the tests' download sessions, so it takes every request there.
+    override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
