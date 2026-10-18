@@ -103,10 +103,10 @@ KICK_LIVE=1 swift test --filter "LiveSession|LiveSmoke"       # live sessions, t
 
 ```bash
 swift run devin-spec-tool        # fetch https://docs.devin.ai/v3-openapi.yaml, normalize, write
-swift run devin-spec-tool --no-fetch   # re-normalize in place; a clean run reports 0 / 0 / 0 / 0
+swift run devin-spec-tool --no-fetch   # re-normalize in place; a clean run reports 0 / 0 / 0 / 0 / 0
 ```
 
-The tool's three transforms, and why the published document needs them, are described in the
+The tool's four transforms, and why the published document needs them, are described in the
 Design article. `Upstream/` holds the drafts that would let them shrink.
 
 ## License

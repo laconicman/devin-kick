@@ -21,7 +21,7 @@ devin-kick wraps Devin's v3 REST API for the `kick` CLI and, from milestone M2, 
   `https`, except plain `http` to `localhost`, `127.0.0.1` or `::1`.
 - Require the regenerated `Sources/DevinOpenAPI/openapi.yaml` in the same PR as any change to
   `Sources/devin-spec-tool/DevinSpecTool.swift`.
-- Require the spec tool's second-run counts (`0 / 0 / 0 / 0`) in the PR body when
+- Require the spec tool's second-run counts (`0 / 0 / 0 / 0 / 0`) in the PR body when
   `Sources/devin-spec-tool/DevinSpecTool.swift` changes: every transform must stay idempotent.
 - Flag a FastAPI-style `handle_…` operation id in
   `Sources/DevinOpenAPI/openapi-generator-config.yaml`; use the spec tool's short ids.
