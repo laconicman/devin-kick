@@ -125,6 +125,37 @@ struct UploadTests {
         #expect(await transport.count("upload_attachment") == 2)
     }
 
+    /// A parent directory swapped for a symlink after the check is caught by the opened file's
+    /// own path (PR #11 review, r4308715320, as edited).
+    @Test func aParentSwappedForASymlinkAfterTheCheckIsNotUploaded() async throws {
+        let sandbox = try Sandbox()
+        defer { sandbox.remove() }
+        let sub = sandbox.root.appending(path: "sub", directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        try Data("inside".utf8).write(to: sub.appending(path: "notes.txt"))
+        try Data("outside".utf8).write(to: sandbox.outside.appending(path: "notes.txt"))
+        let transport = ScriptedTransport(["upload_attachment": [.json(Self.uploaded)]])
+        let kick = try DevinKick.scripted(transport, environment: ["KICK_UPLOAD_ROOTS": sandbox.root.path])
+        let checked = try #require(try kick.checkUploadable(["sub/notes.txt"], relativeTo: sandbox.root).first)
+        try FileManager.default.removeItem(at: sub)
+        try FileManager.default.createSymbolicLink(at: sub, withDestinationURL: sandbox.outside)
+        // The read itself refuses, as if the swap had landed after every path check: the opened
+        // descriptor's own path is outside the root.
+        let roots = try UploadRoots([sandbox.root.path])
+        #expect { try DevinKick.readOpened(checked, within: roots) } throws: { ($0 as? KickError)?.exitCode == 64 }
+        await #expect {
+            try await kick.upload(resolved: checked)
+        } throws: { error in
+            (error as? KickError)?.exitCode == 64
+        }
+        #expect(await transport.count("upload_attachment") == 0)
+        // Unswapped, the same read succeeds.
+        try FileManager.default.removeItem(at: sub)
+        try FileManager.default.createDirectory(at: sub, withIntermediateDirectories: true)
+        try Data("inside".utf8).write(to: sub.appending(path: "notes.txt"))
+        #expect(try DevinKick.readOpened(checked, within: roots) == Data("inside".utf8))
+    }
+
     @Test func aDirectoryIsNotAFile() async throws {
         let sandbox = try Sandbox()
         defer { sandbox.remove() }

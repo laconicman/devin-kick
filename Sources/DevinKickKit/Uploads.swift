@@ -44,10 +44,15 @@ struct UploadRoots: Sendable {
         guard FileManager.default.fileExists(atPath: resolved, isDirectory: &isDirectory), !isDirectory.boolValue else {
             throw .usage("Not a file: \(path). Upload files, not directories.")
         }
-        guard roots.contains(where: { resolved.hasPrefix($0 == "/" ? "/" : $0 + "/") }) else {
+        guard contains(resolved) else {
             throw .usage("\(path) resolves to \(resolved), outside KICK_UPLOAD_ROOTS (\(roots.joined(separator: ":"))). Uploads are permanent; move the file or extend the roots.")
         }
         return URL(fileURLWithPath: resolved)
+    }
+
+    /// Whether the canonical path `resolved` lies inside a root.
+    func contains(_ resolved: String) -> Bool {
+        roots.contains { resolved.hasPrefix($0 == "/" ? "/" : $0 + "/") }
     }
 
     /// `realpath(3)`: the canonical path, symlinks resolved; `nil` if it doesn't exist.
@@ -125,11 +130,29 @@ actor UploadCache {
 }
 
 extension DevinKick {
-    /// The bytes of `url`, opened with `O_NOFOLLOW`, so a symlink put in its place fails.
-    static func readWithoutFollowing(_ url: URL) throws(KickError) -> Data {
+    /// The bytes of the file at `url`, if the file actually opened is that path and inside
+    /// `roots`. The open takes no symlink at the last component (`O_NOFOLLOW`), and the opened
+    /// descriptor's own path (`fcntl(F_GETPATH)`) is checked before a byte is read, so a swap of
+    /// the file or of any parent directory after `prepare` can't upload what lies outside.
+    static func readOpened(_ url: URL, within roots: UploadRoots) throws(KickError) -> Data {
+        let descriptor: FileDescriptor
         do {
-            let descriptor = try FileDescriptor.open(FilePath(url.path), .readOnly, options: [.noFollow])
-            let handle = FileHandle(fileDescriptor: descriptor.rawValue, closeOnDealloc: true)
+            descriptor = try FileDescriptor.open(FilePath(url.path), .readOnly, options: [.noFollow])
+        } catch {
+            throw .usage("Couldn't open \(url.path) (\(error.localizedDescription)); nothing was uploaded.")
+        }
+        let handle = FileHandle(fileDescriptor: descriptor.rawValue, closeOnDealloc: true)
+        var buffer = [CChar](repeating: 0, count: Int(MAXPATHLEN))
+        let status = buffer.withUnsafeMutableBytes { bytes in
+            bytes.baseAddress.map { fcntl(descriptor.rawValue, F_GETPATH, $0) } ?? -1
+        }
+        let opened = status == 0
+            ? String(decoding: buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, as: UTF8.self)
+            : ""
+        guard opened == url.path, roots.contains(opened) else {
+            throw .usage("\(url.path) opened as \(opened.isEmpty ? "an unknown path" : opened), not the file that was checked inside KICK_UPLOAD_ROOTS; nothing was uploaded.")
+        }
+        do {
             return try handle.readToEnd() ?? Data()
         } catch {
             throw .usage("Couldn't read \(url.path) (\(error.localizedDescription)); nothing was uploaded.")
@@ -155,14 +178,10 @@ extension DevinKick {
     }
 
     func upload(resolved file: URL) async throws(KickError) -> Upload {
-        // Checked again as it is read: a file that became a symlink since `prepare` could point
-        // anywhere, and uploads are permanent (PR #11 review, r4308715320). The read doesn't
-        // follow a symlink either, so a swap between this check and the read fails too.
-        let checked = try UploadRoots(configuration.uploadRoots).resolve(file.path)
-        guard checked.path == file.path else {
-            throw .usage("\(file.path) now resolves to \(checked.path), not the file that was checked; nothing was uploaded.")
-        }
-        let data = try Self.readWithoutFollowing(checked)
+        // Uploads are permanent, and a path checked at `prepare` can be swapped since, at the
+        // file or at any parent directory. So what is read is the file actually opened, checked
+        // by its own path (PR #11 review, r4308715320).
+        let data = try Self.readOpened(file, within: try UploadRoots(configuration.uploadRoots))
         let name = file.lastPathComponent
         let sha256 = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         let orgID = try configuration.requireOrgID()
