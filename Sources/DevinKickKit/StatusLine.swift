@@ -34,6 +34,11 @@ public struct Reading: Sendable, Equatable {
         self.outcome = outcome
     }
 
+    /// Whether the status couldn't be read.
+    public var isUnreadable: Bool {
+        if case .unreadable = outcome { true } else { false }
+    }
+
     /// Whether `wait` stops waiting for this one: anything but working, or an error a retry
     /// wouldn't fix. A 429, a 5xx or no answer inside a wait is transient, never terminal.
     public var isSettled: Bool {

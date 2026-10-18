@@ -5,6 +5,10 @@ struct PollingPolicy: Sendable {
     var initialInterval: Duration = .seconds(15)
     var backoffFactor = 1.5
     var maxInterval: Duration = .seconds(60)
+    /// Polls in a row that may fail transiently before a session's error stands: one flaky GET
+    /// mustn't end a wait, and a failing endpoint mustn't keep a 3 h `run` polling it
+    /// (deepwiki-mcp's `maxConsecutivePollFailures`).
+    var maxConsecutiveFailures = 3
 
     /// The interval before poll number `poll` (1-based).
     func interval(before poll: Int) -> Duration {
@@ -34,7 +38,8 @@ extension DevinKick {
     ///
     /// Each GET is raced against the remaining budget, so one hung request can't break the
     /// bound; deepwiki-mcp checked its deadline only between polls. A 429, a 5xx or no answer
-    /// inside a wait is transient: the session is polled again.
+    /// inside a wait is transient: the session is polled again, up to three polls in a row,
+    /// after which its error stands.
     public func wait(_ arguments: [String], until condition: WaitCondition = .all, timeout: Duration = maximumWait) async throws(KickError) -> [Reading] {
         guard timeout > .zero, timeout <= Self.maximumWait else {
             throw .usage("A wait lasts between 1 and \(Self.maximumWait.components.seconds) seconds; call it again to wait longer.")
@@ -50,32 +55,42 @@ extension DevinKick {
     ) async -> [Reading] {
         let deadline = timing.now() + budget
         var readings: [Reading] = []
-        for argument in arguments {
+        var failures = Array(repeating: 0, count: arguments.count)
+        /// Settled, or failed transiently too many polls in a row.
+        func done(_ index: Int) -> Bool {
+            readings[index].isSettled || failures[index] >= timing.polling.maxConsecutiveFailures
+        }
+        func record(_ reading: Reading, at index: Int) {
+            failures[index] = reading.isSettled || !reading.isUnreadable ? 0 : failures[index] + 1
+            readings[index] = reading
+        }
+        for (index, argument) in arguments.enumerated() {
             let reading = await observe(argument, within: deadline - timing.now())
             progress?(reading)
             readings.append(reading)
+            record(reading, at: index)
         }
         var poll = 1
-        while !Self.satisfied(condition, readings) {
+        while !Self.satisfied(condition, readings.indices.map(done)) {
             let remaining = deadline - timing.now()
             guard remaining > .zero else { break }
             try? await timing.sleep(min(timing.polling.interval(before: poll), remaining))
             poll += 1
-            for index in readings.indices where !readings[index].isSettled {
+            for index in readings.indices where !done(index) {
                 let budget = deadline - timing.now()
                 guard budget > .zero else { break }
                 let reading = await observe(arguments[index], within: budget)
                 if reading.outcome.label != readings[index].outcome.label { progress?(reading) }
-                readings[index] = reading
+                record(reading, at: index)
             }
         }
         return readings
     }
 
-    static func satisfied(_ condition: WaitCondition, _ readings: [Reading]) -> Bool {
+    static func satisfied(_ condition: WaitCondition, _ done: [Bool]) -> Bool {
         switch condition {
-        case .any: readings.contains(where: \.isSettled)
-        case .all: readings.allSatisfy(\.isSettled)
+        case .any: done.contains(true)
+        case .all: done.allSatisfy(\.self)
         }
     }
 

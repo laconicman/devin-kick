@@ -150,6 +150,18 @@ struct StatusTests {
         #expect(readings.map(\.outcome.label) == ["done"])
     }
 
+    /// A failing endpoint mustn't keep a wait (or a 3 h run) polling: after three failed polls in
+    /// a row, each a GET with its four retries, the session's error stands.
+    @Test func threeFailedPollsInARowEndTheWaitWithTheError() async throws {
+        let transport = ScriptedTransport(["get_session": [.response(status: 503)]])
+        let sleeps = SleepRecorder()
+        let readings = try await Self.kick(transport, sleeps: sleeps).wait([Self.idA])
+        #expect(readings.first?.outcome.label == "error")
+        #expect(Reading.exitCode(readings) == 69)
+        #expect(await transport.count("get_session") == 15)
+        #expect(sleeps.delays.reduce(.zero, +) < DevinKick.maximumWait)
+    }
+
     /// The bound holds against a request that never answers: the GET is raced against the
     /// remaining budget on real time.
     @Test(.timeLimit(.minutes(1)))

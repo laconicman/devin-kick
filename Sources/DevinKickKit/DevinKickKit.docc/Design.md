@@ -175,7 +175,9 @@ here.
 `wait` polls 15 s, backing off by half to 60 s (deepwiki-mcp's `PollingPolicy` mechanics, not its
 constants), and races each GET against the remaining budget, so one hung request can't break the
 bound; deepwiki-mcp checked its deadline only between polls. A 429, a 5xx or no answer inside a
-wait is transient, never terminal.
+wait is transient: the session is polled again, up to three polls in a row (deepwiki-mcp's
+`maxConsecutivePollFailures`), after which its error stands, so a failing endpoint can't keep a
+3 h `run` polling.
 
 *Rejected:* a blocking "run and wait" MCP tool. The CLI's `kick run` may loop, because a shell
 has no idle limit: it polls the same way within `--budget` (default 3 h), saves, and archives the
@@ -261,8 +263,10 @@ places run directories elsewhere; the index stays central and records absolute p
   still says 30 days), and a sleeping non-resumable one at any age: live, a post to one answered
   400 "Cannot revive devin". `resumable` isn't in `SessionResponse`, so a session kick didn't
   create shows it as unknown.
-- `KICK_LOG_TSV`, when set, gets fstec's 9 columns for every run that settles (`run`, `save`); it
-  lives in the executable and swallows its own failures, as deepwiki-mcp's `UsageLog` does.
+- `KICK_LOG_TSV`, when set, gets fstec's 9 columns for every run that settles (`run`, `save`): a
+  report of settled runs, since status and ACUs exist only then, unlike `UsageLog`'s line at
+  submit; the index is the record of every run. It lives in the executable and swallows its own
+  failures, as deepwiki-mcp's `UsageLog` does.
 
 *Rejected:* locking the index (single short appends don't need it), a directory scan to find runs
 (deepwiki-mcp's `ConsultStore`), and swallowing the index write.
