@@ -20,7 +20,7 @@ milestones as the release plan, tags as versions) and the habits of YDelivery's
 | PR template | Local gate, live smoke, docs touched, spec-tool counts, labels and milestone, free pass, ledger at 0 | `.github/pull_request_template.md` |
 | Reviewer steering | `REVIEW.md` (Devin Review), checked with the `devin-review-rules` validator | `REVIEW.md` |
 | Dependabot | SwiftPM + Actions, monthly | `.github/dependabot.yml` |
-| CI | `swift build` + `swift test` on a swift.org 6.4 toolchain (`swift-actions/setup-swift`), since no hosted image has Xcode 27 yet. Lands with M0 (PR #1), where the package is | `.github/workflows/ci.yml` |
+| CI | `swift build` + `swift test` on GitHub's `xcode-27` image, with the image's own toolchain. Landed with M0 (PR #1), where the package is; a swift.org-toolchain trial before it is TD-5 (#7) | `.github/workflows/ci.yml` |
 | DeepWiki | README badge (weekly auto-refresh, once the repo is indexed) | `README.md` |
 
 ## Habits
