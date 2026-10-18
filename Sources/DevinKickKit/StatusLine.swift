@@ -71,14 +71,20 @@ extension Reading {
         }
     }
 
-    /// Notes for the line: past the resume window, duplicates under the run tag, archived.
+    /// Notes for the line: a sleeping session a reply can't wake, duplicates under the run
+    /// tag, archived.
+    ///
+    /// A non-resumable session can't be woken at all once asleep: live (2026-10-18), a post to
+    /// one answered 400 "Cannot revive devin: its machine was terminated without a snapshot".
     func flags(now: Date) -> [String] {
         var flags: [String] = []
-        if let session, session.status == "suspended", now.timeIntervalSince(session.updatedAt) > Self.resumeWindow {
-            switch run?.resumable {
-            case true?: flags.append("[past the 14-day resume window]")
-            case false?: flags.append("[not resumable]")
-            case nil: flags.append("[resumable: unknown, past 14 days]")
+        if let session, session.status == "suspended" {
+            let pastWindow = now.timeIntervalSince(session.updatedAt) > Self.resumeWindow
+            switch (run?.resumable, pastWindow) {
+            case (false?, _): flags.append("[not resumable: a reply can't wake it]")
+            case (true?, true): flags.append("[past the 14-day resume window]")
+            case (nil, true): flags.append("[resumable: unknown, past 14 days]")
+            case (_, false): break
             }
         }
         if let duplicates = run?.duplicates, !duplicates.isEmpty {

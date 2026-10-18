@@ -81,7 +81,7 @@ struct StatusTests {
         #expect(await kick.observe("20261018-120000-0002").outcome.label == "failed")
     }
 
-    @Test(arguments: [(true as Bool?, "[past the 14-day resume window]"), (false, "[not resumable]"), (nil, "[resumable: unknown, past 14 days]")])
+    @Test(arguments: [(true as Bool?, "[past the 14-day resume window]"), (nil, "[resumable: unknown, past 14 days]")])
     func aSleepingSessionPastTheResumeWindowIsFlagged(_ resumable: Bool?, flag: String) async throws {
         let session = Fixture.session(id: Self.idA, status: "suspended", detail: "inactivity", output: Self.finalOutput)
         let kick = try Self.kick(ScriptedTransport(["get_session": [.json(session)]]))
@@ -94,6 +94,17 @@ struct StatusTests {
         let fifteenDaysLater = Date(timeIntervalSince1970: 1_791_900_100 + 15 * 86_400)
         #expect(reading.line(now: fifteenDaysLater).hasSuffix(flag))
         #expect(!reading.line(now: Date(timeIntervalSince1970: 1_791_900_100 + 86_400)).contains("resum"))
+    }
+
+    /// Live, a post to a sleeping non-resumable session answered 400: flagged at any age.
+    @Test func aSleepingNonResumableSessionIsFlaggedAtAnyAge() async throws {
+        let session = Fixture.session(id: Self.idA, status: "suspended", detail: "user_request", output: Self.finalOutput)
+        let kick = try Self.kick(ScriptedTransport(["get_session": [.json(session)]]))
+        var run = RunState(runID: "20261018-120000-0001", directory: temporaryDirectory(), mode: nil, title: nil, tags: [], resumable: false)
+        run.sessionID = Self.idA
+        try await kick.store.append(IndexEvent(.created, run: run))
+        let line = await kick.observe(Self.idA).line(now: Date(timeIntervalSince1970: 1_791_900_200))
+        #expect(line.hasSuffix("[not resumable: a reply can't wake it]"))
     }
 
     // MARK: - Wait
