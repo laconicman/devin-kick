@@ -8,7 +8,7 @@ devin-kick wraps Devin's v3 REST API for the `kick` CLI and, from milestone M2, 
 - Flag a change to `Sources/DevinKickKit/Settlement.swift` that maps an unlisted `status`, or a
   `status_detail` on a status that carries none, to anything but `.unknown` with its raw value.
 - Flag a change to `Sources/DevinKickKit/Settlement.swift` that returns `.done` after
-  `suspended`/`user_request` or `waiting_for_approval` under any verdict, or after `exit` under
+  `waiting_for_approval` under any verdict, or after `exit` or `suspended`/`user_request` under
   any verdict but `.final`: output may be partial or stale there (TD-4).
 - Flag a change to `Sources/DevinKickKit/Schema.swift` that reads `kick_final` as final while
   `questions_for_user` is non-empty, or that lets a schema without `kick_final` in `required`

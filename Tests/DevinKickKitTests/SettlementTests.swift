@@ -33,8 +33,9 @@ struct SettlementTests {
         .init(status: "running", detail: "finished", readings: ["done", "done", "unknown", "failed", "done"]),
         // A finished session left idle sleeps with its output intact: done, not failed.
         .init(status: "suspended", detail: "inactivity", readings: ["done", "done", "needs-input", "needs-input", "done"]),
-        // Paused by a person, maybe mid-work: output may be partial (PR #1 review, r4306484713).
-        .init(status: "suspended", detail: "user_request", readings: ["needs-input", "needs-input", "needs-input", "needs-input", "needs-input"]),
+        // Paused, by kick's own archive or by a person: read as exit is (owner, 2026-10-18).
+        // Without kick's field, output may be partial (PR #1 review, r4306484713).
+        .init(status: "suspended", detail: "user_request", readings: ["done", "unknown", "needs-input", "needs-input", "needs-input"]),
         .init(status: "suspended", detail: "out_of_credits", readings: ["failed", "failed", "failed", "failed", "failed"]),
         .init(status: "suspended", detail: "contract_expired", readings: ["failed", "failed", "failed", "failed", "failed"]),
         // kick's own field tells a final exit from an interrupted one; a reply since makes it stale.

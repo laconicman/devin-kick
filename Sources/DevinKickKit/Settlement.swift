@@ -11,10 +11,12 @@
 ///   output before every turn ends, asking turns included. So the status pair is read together
 ///   with an ``OutputVerdict``: kick's own `kick_final` field, which every schema kick sends
 ///   carries (``Schema``).
-/// - **An approval wait beats any verdict**, and so does a person's pause
-///   (`suspended`/`user_request`): a reply is needed either way.
-/// - **`exit` with a final output is done**, unless kick replied since (``OutputVerdict/staleFinal``):
-///   the session may then have ended mid-turn with the previous turn's declaration in place.
+/// - **An approval wait beats any verdict:** nothing is final while an action awaits approval.
+/// - **`exit` and a pause (`suspended`/`user_request`) with a final output are done**, unless
+///   kick replied since (``OutputVerdict/staleFinal``): the session may then have stopped
+///   mid-turn with the previous turn's declaration in place. kick's own archive puts a done
+///   session to sleep this way (verified live, 2026-10-18), so a pause is read as `exit` is
+///   (owner, 2026-10-18).
 ///
 /// A session kick didn't create has no `kick_final` (``OutputVerdict/unmarked``) and reads as
 /// M0 read any output: done where Devin stopped by itself, never after `exit`.
@@ -79,8 +81,13 @@ public enum Settlement: Sendable, Hashable {
                 case .provisional, .none: self = .needsInput(detail: "suspended: inactivity")
                 }
             case "user_request":
-                // A person paused it, possibly mid-work: a reply resumes it either way.
-                self = .needsInput(detail: "suspended: user_request")
+                // Paused: by kick's own archive after a final turn, or by a person, possibly
+                // mid-work. kick's field tells which, as for `exit`; a reply resumes it.
+                switch output {
+                case .final: self = .done(detail: "suspended: user_request")
+                case .staleFinal: self = .unknown(status: status, detail: "paused after a reply; the final output may predate it")
+                case .provisional, .none, .unmarked: self = .needsInput(detail: "suspended: user_request")
+                }
             case let reason? where Self.limitSuspensions.contains(reason):
                 self = .failed(status: status, detail: reason)
             default:
