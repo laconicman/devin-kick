@@ -21,7 +21,12 @@ struct ArchiveCommand: AsyncParsableCommand {
     func run() async throws {
         try await eachSession(ids) { (kick, id) async throws(KickError) in
             let session = try await kick.archive(id, terminate: terminate)
-            return "\(session.id)  archived  \(session.status)"
+            let state = session.status + (session.statusDetail.map { "/\($0)" } ?? "")
+            guard terminate, session.status != "exit" else {
+                return "\(session.id)  \(terminate ? "terminated and archived" : "archived")  \(state)"
+            }
+            printError("\(session.id): the terminate was answered, but the session still reads \(state); terminate it again to stop it.")
+            return "\(session.id)  archived, not terminated  \(state)"
         }
     }
 }
@@ -40,7 +45,7 @@ struct UnarchiveCommand: AsyncParsableCommand {
     func run() async throws {
         try await eachSession(ids) { (kick, id) async throws(KickError) in
             let session = try await kick.unarchive(id)
-            return "\(session.id)  unarchived  \(session.status)"
+            return "\(session.id)  unarchived"
         }
     }
 }

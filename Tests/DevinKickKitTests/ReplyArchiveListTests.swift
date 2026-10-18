@@ -56,22 +56,29 @@ struct ReplyArchiveListTests {
 
     @Test func archiveAndUnarchiveAreRecorded() async throws {
         let transport = ScriptedTransport([
-            "archive_session": [.json(Fixture.session(id: Self.sessionID, status: "suspended", detail: "user_request"))],
+            "archive_session": [.json(Fixture.session(id: Self.sessionID, status: "running", detail: "waiting_for_user"))],
             "unarchive_session": [.json(Fixture.session(id: Self.sessionID, status: "suspended", detail: "user_request"))],
+            "get_session": [.json(Fixture.session(id: Self.sessionID, status: "suspended", detail: "user_request"))],
         ])
         let kick = try await Self.kick(transport)
-        _ = try await kick.archive(Self.runID)
+        // The archive's own answer is from before it; the session is read again.
+        #expect(try await kick.archive(Self.runID).status == "suspended")
         #expect(await kick.store.lookup(Self.runID)?.archived == true)
         _ = try await kick.unarchive(Self.sessionID)
         #expect(await kick.store.lookup(Self.runID)?.archived == false)
     }
 
-    /// `--terminate` is one `DELETE …?archive=true`, not a terminate and an archive.
-    @Test func terminateIsOneDeleteThatArchives() async throws {
-        let transport = ScriptedTransport(["terminate_session": [.json(Fixture.session(id: Self.sessionID, status: "exit", detail: nil))]])
+    /// `--terminate` is one `DELETE …?archive=true`, not a terminate and an archive, and the
+    /// session is read again: live, an early terminate answered 200 and didn't end it.
+    @Test(arguments: ["exit", "running"])
+    func terminateIsOneDeleteThatArchivesThenARead(_ after: String) async throws {
+        let transport = ScriptedTransport([
+            "terminate_session": [.json(Fixture.session(id: Self.sessionID, status: "running", detail: "working"))],
+            "get_session": [.json(Fixture.session(id: Self.sessionID, status: after, detail: nil))],
+        ])
         let kick = try await Self.kick(transport)
         let session = try await kick.archive(Self.sessionID, terminate: true)
-        #expect(session.status == "exit")
+        #expect(session.status == after)
         let request = try #require(await transport.sent.first?.request)
         #expect(request.method == .delete)
         #expect(request.path?.hasSuffix("/sessions/\(Self.sessionID)?archive=true") == true)

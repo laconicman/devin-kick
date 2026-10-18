@@ -190,22 +190,26 @@ extension DevinKick {
 
 extension DevinKick {
     /// Archives the session `argument` names, which also puts a running one to sleep; with
-    /// `terminate`, ends it first, in one `DELETE …?archive=true`. Records `archived`.
+    /// `terminate`, ends it first, in one `DELETE …?archive=true`. Records `archived`, and
+    /// returns the session as read afterwards.
+    ///
+    /// Both answers carry the status from before the call, so the session is read again. That
+    /// read is also the only proof of a terminate: live (2026-10-18), one sent a second after
+    /// create answered 200, archived the session and didn't end it.
     public func archive(_ argument: String, terminate: Bool = false) async throws(KickError) -> SessionSnapshot {
         let sessionID = try await sessionID(of: argument)
         let orgID = try configuration.requireOrgID()
-        let session: SessionSnapshot
         if terminate {
-            session = SessionSnapshot(try await call(Operations.TerminateSession.id) {
+            _ = try await call(Operations.TerminateSession.id) {
                 try await client.terminateSession(path: .init(orgId: orgID, devinId: sessionID), query: .init(archive: true)).ok.body.json
-            })
+            }
         } else {
-            session = SessionSnapshot(try await call(Operations.ArchiveSession.id) {
+            _ = try await call(Operations.ArchiveSession.id) {
                 try await client.archiveSession(path: .init(orgId: orgID, devinId: sessionID)).ok.body.json
-            })
+            }
         }
         try await record(.archived, for: argument)
-        return session
+        return try await session(sessionID)
     }
 
     /// Unarchives the session `argument` names. Records `unarchived`.
