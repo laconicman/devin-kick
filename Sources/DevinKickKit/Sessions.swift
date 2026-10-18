@@ -206,8 +206,9 @@ extension DevinKick {
     /// (2026-10-18) a session passed through `running/finished` and read `exit` about 4 s
     /// later, while one terminate sent a second after create answered 200, archived the session
     /// and never ended it. So a terminate is read back until `exit`, for up to
-    /// 15 s. A sleeping session is not waited for: a terminate answers it
-    /// 200 and leaves it `suspended` (live, the same day).
+    /// 15 s, and one that didn't take throws ``KickError/notTerminated(sessionID:status:)``. A
+    /// sleeping session is not waited for: a terminate answers it 200 and leaves it `suspended`
+    /// (live, the same day).
     public func archive(_ argument: String, terminate: Bool = false) async throws(KickError) -> SessionSnapshot {
         let sessionID = try await sessionID(of: argument)
         let orgID = try configuration.requireOrgID()
@@ -237,6 +238,11 @@ extension DevinKick {
         while terminate, !["exit", "suspended"].contains(session.status), timing.now() < deadline {
             try? await timing.sleep(timing.terminatePoll)
             session = try await self.session(sessionID)
+        }
+        // A terminate that didn't take is a failure of what was asked, not a success with a note
+        // (PR #11 review, r4308714800): scripts must not read the session as stopped.
+        if terminate, !["exit", "suspended"].contains(session.status) {
+            throw .notTerminated(sessionID: sessionID, status: session.status + (session.statusDetail.map { "/\($0)" } ?? ""))
         }
         return session
     }

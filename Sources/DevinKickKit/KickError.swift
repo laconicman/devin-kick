@@ -22,6 +22,8 @@ public enum KickError: Error, Sendable, Equatable {
     case store(String)
     /// The session has ended (`exit` or `error`), so a message can't reach it.
     case ended(sessionID: String, status: String)
+    /// A terminate was answered, but the session still read `status` after the settle window.
+    case notTerminated(sessionID: String, status: String)
 
     /// The CLI exit status: sysexits-style where one fits.
     public var exitCode: Int32 {
@@ -30,7 +32,7 @@ public enum KickError: Error, Sendable, Equatable {
         case .usage: 64                      // EX_USAGE
         case .transport: 69                  // EX_UNAVAILABLE: retry
         case .server(let status, _, _) where status == 429 || status >= 500: 69
-        case .server, .decoding, .ended: 1
+        case .server, .decoding, .ended, .notTerminated: 1
         case .store: 73                      // EX_CANTCREAT
         }
     }
@@ -53,6 +55,8 @@ extension KickError: LocalizedError {
             return "Devin's answer could not be read (\(message)). The vendored spec may be stale: re-vendor it with `swift run devin-spec-tool`."
         case .ended(let sessionID, let status):
             return "Session \(sessionID) has ended (\(status)): a reply can't reach it. Start a new session."
+        case .notTerminated(let sessionID, let status):
+            return "The terminate of session \(sessionID) was answered, but the session still reads \(status) (it is archived). Terminate it again to stop it."
         }
     }
 

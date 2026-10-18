@@ -242,7 +242,7 @@ extension DevinKick {
         switch error {
         case .transport, .decoding: true
         case .server(let status, _, _): status >= 500
-        case .config, .usage, .store, .ended: false
+        case .config, .usage, .store, .ended, .notTerminated: false
         }
     }
 

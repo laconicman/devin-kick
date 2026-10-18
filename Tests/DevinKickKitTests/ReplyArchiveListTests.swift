@@ -79,10 +79,16 @@ struct ReplyArchiveListTests {
                             .json(Fixture.session(id: Self.sessionID, status: after, detail: nil))],
         ])
         let kick = try await Self.kick(transport)
-        let session = try await kick.archive(Self.sessionID, terminate: true)
-        #expect(session.status == after)
         // Read until exit (or asleep, which a terminate doesn't change), or for the 15 s
-        // settle at 3 s apart: 1 + 5 reads.
+        // settle at 3 s apart: 1 + 5 reads. One still running after that is a failure, exit 1
+        // (PR #11 review, r4308714800).
+        if after == "running" {
+            await #expect(throws: KickError.notTerminated(sessionID: Self.sessionID, status: "running")) {
+                try await kick.archive(Self.sessionID, terminate: true)
+            }
+        } else {
+            #expect(try await kick.archive(Self.sessionID, terminate: true).status == after)
+        }
         #expect(await transport.count("get_session") == reads)
         let request = try #require(await transport.sent.first?.request)
         #expect(request.method == .delete)

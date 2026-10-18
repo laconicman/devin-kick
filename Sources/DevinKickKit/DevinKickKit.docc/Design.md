@@ -328,9 +328,9 @@ uuid, and a user's upload is listed with `source: user`.
 - **Archive** puts a running session to sleep as `suspended`/`user_request` (live). Both archive's
   and terminate's answers carry the status from before the call, so kick reads the session back.
 - **Terminate** (`DELETE …?archive=true`) settles asynchronously: live, a session read
-  `running`/`finished`, then `exit` about 4 s later. kick reads it back for up to 15 s and says so
-  when it didn't end: one terminate sent a second after create answered 200 and never ended the
-  session. A terminate of a sleeping session answers 200 and leaves it asleep; of an ended one,
+  `running`/`finished`, then `exit` about 4 s later. kick reads it back for up to 15 s, and one
+  that didn't end the session fails (exit 1) rather than reading as done: one terminate sent a
+  second after create answered 200 and never ended the session. A terminate of a sleeping session answers 200 and leaves it asleep; of an ended one,
   400.
 - **No prompt cap** was found up to 16 MiB; the first message held every byte (live).
 
