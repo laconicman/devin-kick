@@ -29,7 +29,7 @@ struct RunCommand: AsyncParsableCommand {
             for request in try flags.requests(kick) {
                 do throws(KickError) {
                     let run = try await kick.start(request)
-                    print(run.line)
+                    emit(run.line)
                     started.append(run)
                 } catch {
                     printError("\(request.name): \(error.localizedDescription)")
@@ -39,7 +39,7 @@ struct RunCommand: AsyncParsableCommand {
             let completed = await kick.run(started, budget: budget) { reading in printError(reading.line()) }
             for result in completed {
                 if let saved = result.saved {
-                    print(saved.line + (result.archived ? "  [archived]" : ""))
+                    emit(saved.line + (result.archived ? "  [archived]" : ""))
                     TSVLog.append(saved)
                 }
                 if let error = result.error { printError("\(result.started.run.runID): \(error.localizedDescription)") }

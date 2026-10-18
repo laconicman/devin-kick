@@ -45,6 +45,6 @@ struct StatusCommand: AsyncParsableCommand {
 
 /// Prints one line per reading and returns their aggregate exit status.
 func printed(_ readings: [Reading]) -> Int32 {
-    for reading in readings { print(reading.line()) }
+    for reading in readings { emit(reading.line()) }
     return Reading.exitCode(readings)
 }

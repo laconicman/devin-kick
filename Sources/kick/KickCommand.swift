@@ -36,8 +36,8 @@ struct WhoAmI: AsyncParsableCommand {
         try await reportingKickErrors { () async throws(KickError) in
             let kick = DevinKick(configuration: try Configuration.fromEnvironment())
             let principal = try await kick.whoami()
-            print("principal_type: \(principal.type)")
-            if let name = principal.name { print("name: \(name)") }
+            emit("principal_type: \(principal.type)")
+            if let name = principal.name { emit("name: \(name)") }
         }
     }
 }
@@ -57,13 +57,19 @@ func each<Item>(
     var firstFailure: KickError?
     for item in items {
         do throws(KickError) {
-            print(try await body(item))
+            emit(try await body(item))
         } catch {
             printError("\(name(item)): \(error.localizedDescription)")
             firstFailure = firstFailure ?? error
         }
     }
     if let firstFailure { throw firstFailure }
+}
+
+/// Writes `line` to stdout at once. `print` is block-buffered when stdout is a pipe or a file,
+/// so a script reading `kick run`'s first line (the run id) would wait for the process to end.
+func emit(_ line: String) {
+    FileHandle.standardOutput.write(Data((line + "\n").utf8))
 }
 
 /// Writes `kick: <message>` to stderr.

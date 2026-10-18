@@ -30,11 +30,11 @@ struct ListCommand: AsyncParsableCommand {
         try await reportingKickErrors { () async throws(KickError) in
             let kick = try DevinKick.fromEnvironment()
             if remote {
-                for reading in try await kick.observeRemote(tagged: tag, limit: limit) { print(reading.line()) }
+                for reading in try await kick.observeRemote(tagged: tag, limit: limit) { emit(reading.line()) }
                 return
             }
             await kick.reconcileOrphans()
-            for run in await kick.store.runs(tagged: tag).prefix(limit) { print(run.line) }
+            for run in await kick.store.runs(tagged: tag).prefix(limit) { emit(run.line) }
         }
     }
 }

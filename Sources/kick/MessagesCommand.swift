@@ -28,7 +28,7 @@ struct MessagesCommand: AsyncParsableCommand {
             let kick = try DevinKick.fromEnvironment()
             let sessionID = try await kick.sessionID(of: id)
             for message in try await kick.messages(sessionID, last: last) {
-                print(full ? message.fullText : message.compactLine)
+                emit(full ? message.fullText : message.compactLine)
             }
         }
     }

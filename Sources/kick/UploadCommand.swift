@@ -25,7 +25,7 @@ struct UploadCommand: AsyncParsableCommand {
     func run() async throws {
         try await reportingKickErrors { () async throws(KickError) in
             for upload in try await DevinKick.fromEnvironment().upload(files) {
-                print("\(upload.file.path) → \(upload.url) (\(upload.cached ? "cached" : "uploaded"))")
+                emit("\(upload.file.path) → \(upload.url) (\(upload.cached ? "cached" : "uploaded"))")
             }
         }
     }

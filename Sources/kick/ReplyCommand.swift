@@ -43,7 +43,7 @@ struct ReplyCommand: AsyncParsableCommand {
                 message = text ?? ""
             }
             try await kick.reply(id, text: message, attach: attach)
-            print("posted to \(try await kick.sessionID(of: id))")
+            emit("posted to \(try await kick.sessionID(of: id))")
         }
     }
 }
