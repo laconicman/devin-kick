@@ -1,0 +1,30 @@
+# swift-openapi-generator build-plugin config (the plugin loads exactly this filename).
+# Style mirrors deepwiki-mcp and GitLabKit: types + client, public access so the façade
+# (DevinKickKit) can re-vend what it needs, idiomatic naming (`status_detail` → `statusDetail`).
+# The spec is the official one, normalized by `swift run devin-spec-tool`; the short operation
+# ids below are that tool's (`handle_create_session_v3_…_post` → `create_session`).
+generate:
+  - types
+  - client
+accessModifier: public
+namingStrategy: idiomatic
+additionalFileComments:
+  - "swiftlint:disable all"
+filter:
+  operations:
+    - get_self                    # GET  /v3/self — connectivity and identity
+    - get_automation_schemas      # GET  …/automations/schemas — available_devin_modes
+    - create_session              # POST …/sessions
+    - get_sessions                # GET  …/sessions — the `qs` filter object
+    - get_session                 # GET  …/sessions/{devin_id}
+    - terminate_session           # DELETE …/sessions/{devin_id}
+    - archive_session             # POST …/sessions/{devin_id}/archive
+    - unarchive_session           # POST …/sessions/{devin_id}/unarchive
+    - get_session_messages        # GET  …/sessions/{devin_id}/messages
+    - post_message                # POST …/sessions/{devin_id}/messages
+    - get_session_attachments     # GET  …/sessions/{devin_id}/attachments
+    - get_session_tags            # GET  …/sessions/{devin_id}/tags
+    - append_session_tags         # POST …/sessions/{devin_id}/tags
+    - replace_session_tags        # PUT  …/sessions/{devin_id}/tags
+    - upload_attachment           # POST …/attachments (multipart)
+    - download_attachment         # GET  …/attachments/{uuid}/{name} (307 to a presigned URL)
