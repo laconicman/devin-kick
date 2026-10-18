@@ -14,13 +14,14 @@ struct KickCommand: AsyncParsableCommand {
         Export them from ~/.zshenv so every shell, and every agent's shell, sees them.
 
         Exit status (stable; scripts may rely on it):
-          0   done                    10  needs input (Devin asks, or awaits approval)
-          75  still working: poll     11  unknown state, printed raw
-          69  no answer, or 429/5xx: retry
-          1   failed                  64  usage error         78  configuration error
+        \(ExitStatus.help)
         """,
         version: DevinKick.version,
-        subcommands: [WhoAmI.self]
+        subcommands: [
+            WhoAmI.self, UploadCommand.self, StartCommand.self, StatusCommand.self, WaitCommand.self,
+            MessagesCommand.self, SaveCommand.self, ReplyCommand.self, ArchiveCommand.self, UnarchiveCommand.self,
+            ListCommand.self, RunCommand.self,
+        ]
     )
 }
 
@@ -35,18 +36,64 @@ struct WhoAmI: AsyncParsableCommand {
         try await reportingKickErrors { () async throws(KickError) in
             let kick = DevinKick(configuration: try Configuration.fromEnvironment())
             let principal = try await kick.whoami()
-            print("principal_type: \(principal.type)")
-            if let name = principal.name { print("name: \(name)") }
+            emit("principal_type: \(principal.type)")
+            if let name = principal.name { emit("name: \(name)") }
         }
     }
 }
 
+extension DevinKick {
+    /// The façade over the environment's configuration, warnings to stderr.
+    static func fromEnvironment() throws(KickError) -> DevinKick {
+        DevinKick(configuration: try Configuration.fromEnvironment())
+    }
+}
+
+/// Runs `body` for each item and prints the line it returns. One failure is printed and doesn't
+/// stop the rest; the first one is rethrown at the end, so it sets the exit status.
+func each<Item>(
+    _ items: [Item], named name: (Item) -> String, _ body: (Item) async throws(KickError) -> String
+) async throws(KickError) {
+    var firstFailure: KickError?
+    for item in items {
+        do throws(KickError) {
+            emit(try await body(item))
+        } catch {
+            printError("\(name(item)): \(error.localizedDescription)")
+            firstFailure = firstFailure ?? error
+        }
+    }
+    if let firstFailure { throw firstFailure }
+}
+
+/// Writes `line` to stdout at once. `print` is block-buffered when stdout is a pipe or a file,
+/// so a script reading `kick run`'s first line (the run id) would wait for the process to end.
+func emit(_ line: String) {
+    FileHandle.standardOutput.write(Data((line + "\n").utf8))
+}
+
+/// Writes `kick: <message>` to stderr.
+func printError(_ message: String) {
+    FileHandle.standardError.write(Data("kick: \(message)\n".utf8))
+}
+
 /// Runs `body`, printing a ``KickError`` to stderr and exiting with its documented status.
 func reportingKickErrors(_ body: () async throws(KickError) -> Void) async throws {
-    do {
+    try await exitingWithStatus { () async throws(KickError) -> Int32 in
         try await body()
+        return 0
+    }
+}
+
+/// Runs `body` and exits with the status it returns, or with a ``KickError``'s, printed to
+/// stderr.
+func exitingWithStatus(_ body: () async throws(KickError) -> Int32) async throws {
+    let code: Int32
+    do {
+        code = try await body()
     } catch {
-        FileHandle.standardError.write(Data("kick: \(error.localizedDescription)\n".utf8))
+        printError(error.localizedDescription)
         throw ExitCode(error.exitCode)
     }
+    if code != 0 { throw ExitCode(code) }
 }

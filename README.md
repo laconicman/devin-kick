@@ -19,9 +19,9 @@ milestones are in `Roadmap.md` and the known compromises in `TechDebt.md`, besid
 
 ## Status
 
-Milestone **M0** (contract spike): the generated client, the façade, `kick self`, and the
-session-lifecycle seam with its exit statuses. The CLI core (M1) and the MCP server (M2, M3) are
-next.
+Milestone **M1** (CLI core): upload, start from a prompt file or a manifest, status, wait, save,
+messages, reply, archive and list, and `run` end to end, with retries and a local run store. The
+MCP server (M2, M3) is next.
 
 ## Build and try
 
@@ -32,9 +32,45 @@ swift build
 export DEVIN_API_KEY=cog_…   # better: in ~/.zshenv, so agents' shells see it too
 export DEVIN_ORG_ID=org-…
 swift run kick self          # principal_type: pat_user
+swift run kick run --prompt task.md --title "A small job"
 ```
 
 `kick` never prints the key.
+
+### Commands
+
+`ID` is a session id, a run id (`yyyyMMdd-HHmmss-xxxx`) or a run directory.
+
+| Command | Does |
+|---|---|
+| `kick upload FILE…` | uploads files inside `KICK_UPLOAD_ROOTS`; a file uploaded before is reused, not sent again |
+| `kick start --prompt FILE \| --manifest FILE` | starts sessions, recorded before the POST; prints run id, session id, URL, run directory |
+| `kick status ID… [--tag T]` | one line per session: state, Devin's status, kick's reading of the output, age, mode |
+| `kick wait ID… [--any\|--all] [--timeout S]` | waits at most 240 s for sessions to settle |
+| `kick save ID…` | session, result, messages and attachments into the run directory |
+| `kick messages ID [--last N] [--full]` | the transcript |
+| `kick reply ID (--text T \| --file F) [--attach F…]` | posts a message; a session that has ended is refused |
+| `kick archive ID… [--terminate]` / `kick unarchive ID…` | archives, optionally ending the session first |
+| `kick list [--tag T] [--remote] [--limit N]` | the local run index, or the server's sessions |
+| `kick run …start's options… [--budget 3h]` | start, wait, save, and archive what's done |
+
+`start` and `run` take `--title`, `--schema FILE` (a JSON Schema; kick adds its `kick_final`
+field), `--attach FILE`, `--mode`, `--tag`, `--no-resumable`, `--no-bypass-approval`,
+`--acu-limit` and `--out DIR`. A manifest is a JSON array of
+`{prompt_file, title, schema_file?, attach?, mode?, tags?}`; every entry is checked before the
+first one starts. `kick help <command>` has the details.
+
+### Environment
+
+| Variable | Meaning |
+|---|---|
+| `DEVIN_API_KEY` | the `cog_` key; required, never printed |
+| `DEVIN_ORG_ID` | the organization, for everything but `kick self` |
+| `KICK_STORE` | the run store; default `~/Library/Application Support/devin-kick` |
+| `KICK_UPLOAD_ROOTS` | colon-separated directories uploads may come from; unset, nothing is uploaded |
+| `KICK_MODE` | the default Devin mode (after `--mode` and a manifest entry's); default `swe-2-max` |
+| `KICK_LOG_TSV` | a file that gets one TSV line per run that settles |
+| `KICK_SERVER_URL` | an `https` override of `https://api.devin.ai` (plain `http` only to loopback) |
 
 ### Exit status
 
@@ -49,13 +85,18 @@ Stable, so scripts may rely on it:
 | 69 | no answer, or 429 / 5xx: retry |
 | 1 | failed |
 | 64 | usage error |
+| 73 | the run store couldn't record the run (`KICK_STORE`, `--out`) |
 | 78 | configuration error |
+
+With several sessions, `status`, `wait` and `run` exit with the worst: failed > unknown > needs
+input > working > done.
 
 ## Tests
 
 ```bash
-swift test                                       # offline: settlement, errors, field fixtures
-KICK_LIVE=1 swift test --filter LiveSmoke        # live, read-only contract checks
+swift test                                                    # offline, over a scripted transport
+KICK_LIVE=1 swift test --filter LiveSmoke                     # live, read-only contract checks
+KICK_LIVE=1 swift test --filter "LiveSession|LiveSmoke"       # live sessions, tagged devin-kick-test and archived
 ```
 
 ## Maintainers: re-vendoring the spec

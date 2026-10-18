@@ -17,6 +17,13 @@ public enum KickError: Error, Sendable, Equatable {
     case server(status: Int, code: String?, detail: String)
     /// Devin answered 2xx with a body this version can't read.
     case decoding(String)
+    /// The run store couldn't record a run: `request.json` or the index. Not retryable as is;
+    /// fix the store (`KICK_STORE`, `--out`) first.
+    case store(String)
+    /// The session has ended (`exit` or `error`), so a message can't reach it.
+    case ended(sessionID: String, status: String)
+    /// A terminate was answered, but the session still read `status` after the settle window.
+    case notTerminated(sessionID: String, status: String)
 
     /// The CLI exit status: sysexits-style where one fits.
     public var exitCode: Int32 {
@@ -25,7 +32,8 @@ public enum KickError: Error, Sendable, Equatable {
         case .usage: 64                      // EX_USAGE
         case .transport: 69                  // EX_UNAVAILABLE: retry
         case .server(let status, _, _) where status == 429 || status >= 500: 69
-        case .server, .decoding: 1
+        case .server, .decoding, .ended, .notTerminated: 1
+        case .store: 73                      // EX_CANTCREAT
         }
     }
 
@@ -36,7 +44,7 @@ public enum KickError: Error, Sendable, Equatable {
 extension KickError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case .config(let message), .usage(let message):
+        case .config(let message), .usage(let message), .store(let message):
             return message
         case .transport(let message):
             return "No answer from Devin (\(message)). Retry; sessions already created are unaffected."
@@ -45,6 +53,10 @@ extension KickError: LocalizedError {
             return "Devin answered \(status): \(code)\(detail)\(Self.hint(for: status))"
         case .decoding(let message):
             return "Devin's answer could not be read (\(message)). The vendored spec may be stale: re-vendor it with `swift run devin-spec-tool`."
+        case .ended(let sessionID, let status):
+            return "Session \(sessionID) has ended (\(status)): a reply can't reach it. Start a new session."
+        case .notTerminated(let sessionID, let status):
+            return "The terminate of session \(sessionID) was answered, but the session still reads \(status) (it is archived). Terminate it again to stop it."
         }
     }
 
@@ -61,14 +73,16 @@ extension KickError: LocalizedError {
 }
 
 extension KickError {
-    /// Classifies an error thrown by the generated client: a transport failure or an
-    /// undecodable body. HTTP error statuses arrive as documented outputs, not as throws.
+    /// Classifies an error thrown by the generated client: an error status (read by
+    /// `ProblemMiddleware`), a transport failure or an undecodable body.
     init(clientError error: any Error) {
         guard let clientError = error as? ClientError else {
             self = .transport(error.localizedDescription)
             return
         }
         switch clientError.underlyingError {
+        case let problem as ProblemResponse:
+            self = .server(status: problem.status, code: problem.code, detail: problem.detail)
         case is URLError:
             self = .transport(clientError.underlyingError.localizedDescription)
         case is DecodingError:

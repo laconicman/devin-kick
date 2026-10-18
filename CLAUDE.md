@@ -64,10 +64,11 @@ upcoming features on every handwritten target. Each choice is reasoned in `Desig
    - A ruleset blocks force-push and deletion of `main`. Requiring checks is the owner's call.
 10. **GitHub bookkeeping.**
     - Every PR is labelled for `.github/release.yml` and placed in its milestone.
-    - The PR that completes milestone M_n bumps `DevinKick.version` to `0.(n+1).0`. After it
-      merges: an annotated tag of that version (no `v`), its message the milestone's done-when
-      sentence; then `gh release create <tag> --generate-notes`, and the milestone closed in the
-      same step.
+    - The tag is the one milestone M_n's title ends in: `0.(n+1).0` through M4, and `1.0.0` for M5
+      (owner, 2026-10-18); M6 has none. The PR that completes M_n's features sets
+      `DevinKick.version` to it. Once the milestone's PRs have merged: an annotated tag of that
+      version (no `v`), its message the milestone's done-when sentence; then
+      `gh release create <tag> --generate-notes`, and the milestone closed in the same step.
     - The recipes are in `docs/GitHubWorkflow.md`.
 11. **One public identity, no AI attribution.** Commits only as
     `laconicman <laconicman@icloud.com>`; check `git log --format='%ae %ce' @{u}..` before a push.

@@ -2,7 +2,7 @@
 import Foundation
 import Testing
 
-@Suite("KickError and Configuration")
+@Suite("KickError and Configuration", .temporaryDirectories)
 struct KickErrorTests {
     @Test func exitCodesFollowSysexits() {
         #expect(KickError.config("x").exitCode == 78)
@@ -12,6 +12,8 @@ struct KickErrorTests {
         #expect(KickError.server(status: 503, code: nil, detail: "x").exitCode == 69)
         #expect(KickError.server(status: 404, code: nil, detail: "x").exitCode == 1)
         #expect(KickError.decoding("x").exitCode == 1)
+        #expect(KickError.store("x").exitCode == 73)
+        #expect(!KickError.store("x").isRetryable)
     }
 
     @Test func serverErrorsQuoteTheDetailAndAHint() {
@@ -37,9 +39,12 @@ struct KickErrorTests {
     @Test func environmentIsRead() throws {
         let configuration = try Configuration.fromEnvironment([
             "DEVIN_API_KEY": "cog_x", "DEVIN_ORG_ID": "org-1", "KICK_SERVER_URL": "https://example.test",
+            "KICK_STORE": "/tmp/kick-store",
         ])
         #expect(try configuration.requireOrgID() == "org-1")
         #expect(configuration.serverURL.absoluteString == "https://example.test")
+        #expect(configuration.storeURL.path == "/tmp/kick-store")
+        #expect(try Configuration.fromEnvironment(["DEVIN_API_KEY": "cog_x"]).storeURL.path.hasSuffix("Application Support/devin-kick"))
     }
 
     /// A relative or clear-text override is a configuration error, not a transport error later,
