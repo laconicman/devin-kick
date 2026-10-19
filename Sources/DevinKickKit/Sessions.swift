@@ -136,9 +136,10 @@ extension DevinKick {
     }
 
     /// Where `arguments` stand, then every other session on the server carrying `tag`: `kick
-    /// status` and `kick_status`. A session both named and tagged is read once, so the overall
-    /// state counts it once. Runs whose create's answer was lost are first looked for by their
-    /// run tag. A tag no session carries is a usage error when nothing else was named.
+    /// status` and `kick_status`. A session both named and tagged is listed once, so the overall
+    /// state counts it once; a named one that couldn't be read takes the listing's reading. Runs
+    /// whose create's answer was lost are first looked for by their run tag. A tag no session
+    /// carries is a usage error when nothing else was named.
     public func status(_ arguments: [String], tag: String? = nil) async throws(KickError) -> [Reading] {
         await reconcileOrphans()
         var readings: [Reading] = []
@@ -148,10 +149,29 @@ extension DevinKick {
         if let tag {
             let tagged = try await observe(tagged: tag)
             guard !tagged.isEmpty || !readings.isEmpty else { throw .usage("No session carries the tag \(tag).") }
-            let named = Set(readings.compactMap { $0.session?.id })
-            readings += tagged.filter { reading in reading.session.map { !named.contains($0.id) } ?? true }
+            for reading in tagged {
+                // Matched by every id a named reading carries: an unreadable one has no snapshot
+                // (Devin Review, PR #13).
+                guard let id = reading.session?.id,
+                      let index = readings.firstIndex(where: { Self.sessionID(of: $0) == id }) else {
+                    readings.append(reading)
+                    continue
+                }
+                if readings[index].isUnreadable {
+                    readings[index] = Reading(
+                        argument: readings[index].argument, run: reading.run ?? readings[index].run,
+                        session: reading.session, verdict: reading.verdict, outcome: reading.outcome
+                    )
+                }
+            }
         }
         return readings
+    }
+
+    /// The session `reading` is of: its snapshot's, its run's, or, for a run the store doesn't
+    /// know, the argument itself, which ``observe(_:)`` then read as a session id.
+    static func sessionID(of reading: Reading) -> String? {
+        reading.session?.id ?? reading.run?.sessionID ?? (reading.run == nil ? reading.argument : nil)
     }
 
     /// Every session carrying `tag` on the server, read from one listing.

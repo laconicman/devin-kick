@@ -238,6 +238,16 @@ struct StatusTests {
             Fixture.session(id: Self.idA, tags: ["t"]), Fixture.session(id: Self.idB, tags: ["t"]),
         ]))])
         #expect(try await kick.status([Self.idA], tag: "t").map { $0.session?.id } == [Self.idA, Self.idB])
+        // A named session that couldn't be read takes the listing's reading, keeping its own
+        // argument (Devin Review, PR #13).
+        await transport.script("get_session", [.response(status: 404, body: Fixture.problem(status: 404, detail: "gone"))])
+        await transport.script("get_sessions", [.json(Fixture.page([
+            Fixture.session(id: Self.idA, detail: "waiting_for_user", output: Self.finalOutput, tags: ["t"]),
+        ]))])
+        let healed = try await kick.status([Self.idA], tag: "t")
+        #expect(healed.map(\.argument) == [Self.idA])
+        #expect(healed.map(\.outcome.label) == ["done"])
+        #expect(Reading.exitCode(healed) == 0)
     }
 
     @Test(arguments: [Duration.zero, .seconds(241)])
