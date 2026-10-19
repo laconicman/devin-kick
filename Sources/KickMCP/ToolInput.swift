@@ -97,9 +97,17 @@ enum InputSchema {
         ["type": "array", "items": items, "minItems": 1, "description": .string(description)]
     }
 
-    /// A ``StringList``: declared as an array, which is what models should send.
+    /// A ``StringList``, declared both ways it decodes: a client that validates arguments against
+    /// the schema would otherwise refuse the comma-separated form before it reached the server
+    /// (Devin Review, PR #13).
     static func list(_ description: String) -> Value {
-        ["type": "array", "items": ["type": "string"], "description": .string(description)]
+        [
+            "anyOf": [
+                ["type": "array", "items": ["type": "string"]],
+                ["type": "string", "description": "The items in one string, separated by commas; an item can't contain one."],
+            ],
+            "description": .string(description),
+        ]
     }
 
     static func integer(_ description: String, minimum: Int, maximum: Int? = nil) -> Value {

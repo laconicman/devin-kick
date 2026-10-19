@@ -80,6 +80,13 @@ struct ToolboxTests {
         #expect(text == "a\nb\nnext: call kick_echo again")
     }
 
+    /// A list is declared both ways it decodes, so a client that validates arguments lets the
+    /// comma-separated form through (Devin Review, PR #13).
+    @Test func aListIsDeclaredAsAnArrayOrAString() {
+        let forms = InputSchema.list("x").objectValue?["anyOf"]?.arrayValue?.compactMap { $0.objectValue?["type"]?.stringValue }
+        #expect(forms == ["array", "string"])
+    }
+
     /// A failure renders its message and the status the CLI would exit with, never thrown.
     @Test func aKickErrorCarriesTheStatusTheCLIWouldGive() async throws {
         let (text, isError) = try await Self.call(try Self.toolbox(), ["ids": ["a"], "fail": "reset"])

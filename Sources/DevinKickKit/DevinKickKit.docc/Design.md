@@ -385,8 +385,9 @@ SDK is pre-1.0, and linked only into `KickMCP`.
   an unknown tool, a protocol error (-32602) by the MCP spec of 2025-11-25, and cancellation.
 - **Arguments are checked against the tool's own schema.** A name the schema doesn't list is
   refused, since decoding would ignore a guessed `attachments` and start a session without its
-  files. A list is an array or one comma-separated string (deepwiki-mcp's `stringArray`). A
-  string the SDK read as a `data:` URL is refused (<doc:TechDebt> TD-9).
+  files. A list is an array or one comma-separated string (deepwiki-mcp's `stringArray`), and
+  the schema declares both, so a client that validates arguments lets either through. A string
+  the SDK read as a `data:` URL is refused (<doc:TechDebt> TD-9).
 - **Handlers run `@concurrent`.** The SDK starts each from its `Server` actor, so under
   `NonisolatedNonsendingByDefault` their synchronous stretches would stall every other call. The
   SDK runs each request in a task of its own, so a long `kick_wait` holds up no other call.
