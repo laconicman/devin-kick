@@ -176,6 +176,24 @@ POST, and the next status call finds the session.
 racing every call against `--max-wait`, as `wait` races its GETs. The first is the cheaper
 (DeepWiki on deepwiki-mcp, 2026-10-19, which never set one and never met the case).
 
+### TD-11 — a batch above 64 sessions must be split — *open (a questionable enhancement)*
+
+Tracked in [#16](https://github.com/laconicman/devin-kick/issues/16).
+
+One `kick_start` call starts at most 20 sessions, or 64 with the operator's confirmation (owner,
+2026-10-19). Every run id of a batch then fits its next step, which the 4 KB result cap keeps, so
+no run loses its handle when the cap cuts the result's lines. Devin Review on PR #13 found that an
+unbounded confirmed batch did lose them: past about 15 start lines, the side tools had no way to
+name the rest (<doc:Design>, "kick serve: the side profile").
+
+**Cost:** a model splits a batch above 64 sessions into several calls, and waits on and saves
+each call's runs separately.
+
+**Discharge** (a questionable enhancement, owner 2026-10-19): every `kick_start` call tags its
+sessions with a batch tag (`kick-batch-<id>`) named in the next step, and `kick_wait` and
+`kick_save` take a tag beside ids. Larger batches would then stay workable. Whether batches that
+large are worth the added surface is open.
+
 ## See Also
 
 - <doc:Design>

@@ -413,7 +413,10 @@ them; the folds are idempotent, so the index stays right, only noisier.
   no tool can turn that off, so one call must not fan out without a bound. Above the cap,
   `kick_start` answers a usage error telling the model to split the batch, or to ask the operator
   and call again with `confirmed_by_operator: true`, which Claude Code's permission prompt shows.
-  The CLI's manifests stay uncapped, since a person runs them. Every session is validated before
+  Confirmed, a batch goes up to 64 sessions and no further (owner, 2026-10-19): its run ids then
+  all fit the next step, which the cap keeps, so no run loses its handle when the cap cuts the
+  lines (Devin Review, PR #13; a batch tag for larger ones is <doc:TechDebt> TD-11). The CLI's
+  manifests stay uncapped, since a person runs them. Every session is validated before
   the first POST, as a manifest's are. The mode is the call's, then the session's, then
   `KICK_MODE`, then `swe-2-max`.
 - **A prompt comes from a file or inline** (owner, 2026-10-19). An inline `prompt` is written into
@@ -429,9 +432,8 @@ them; the folds are idempotent, so the index stays right, only noisier.
   `kick_final`; `kick_messages` shows first lines, the last 10 by default, each cut at 160
   characters. Every result passes one cap, 4 KB: whole lines are kept while they fit, then a note
   says how many were left out and where the rest is. The next step is repeated in every result,
-  and the cap keeps it, cut within only past a quarter of the cap, as is the note's pointer, so
-  no result can outgrow the cap. A start above 20 sessions names its runs in the lines, not in
-  the next step.
+  and the cap keeps it, cut within only past half the cap (a 64-session batch's run ids take
+  about 1.6 KB); the note's pointer keeps a quarter. So no result can outgrow the cap.
 - **Waits stay under the client's limit.** `kick_wait` waits at most `--max-wait` (1 to 240 s,
   240 by default); a longer `timeout` is a usage error saying to call again, which teaches the
   bound where a clamp would hide it. A still-working session's line carries its latest message's

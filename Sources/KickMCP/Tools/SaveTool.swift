@@ -37,7 +37,8 @@ extension ToolSpec {
         return ToolReply(
             lines: lines,
             next: "next: read result.json in each run directory; kick_archive the sessions you are done with.",
-            rest: "every file is in the run directory named above it",
+            // A batch of up to 64 is saved in parts: saving again only rewrites the same files.
+            rest: "call again with fewer ids at a time; every file is in its run directory",
             isError: saved == 0
         )
     }

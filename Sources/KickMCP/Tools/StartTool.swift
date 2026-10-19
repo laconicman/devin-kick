@@ -46,6 +46,12 @@ extension ToolSpec {
     /// person runs them.
     static let startBatchLimit = 20
 
+    /// The most sessions one call starts even with the operator's confirmation (owner,
+    /// 2026-10-19, after Devin Review on PR #13): a batch's run ids then all fit its next step,
+    /// which the result cap keeps, so no run of the batch loses its handle. Larger batches are
+    /// split (TD-11).
+    static let startBatchCeiling = 64
+
     /// `kick_start`: one session or a batch, each recorded at submit; returns at once.
     /// `bypassApproval` is the operator's choice at `kick serve`'s launch, never an argument.
     static func start(bypassApproval: Bool) -> ToolSpec {
@@ -71,9 +77,9 @@ extension ToolSpec {
             files must lie inside KICK_UPLOAD_ROOTS. The mode is the call's mode, else the \
             session's, else KICK_MODE, else swe-2-max.
 
-            At most \(startBatchLimit) sessions per call. For more, split the batch, or ask the \
-            operator and, if they agree, call again with confirmed_by_operator: true; give such a \
-            batch one tag of its own, since kick_status can read every session by it.
+            At most \(startBatchLimit) sessions per call. For more, up to \(startBatchCeiling), ask \
+            the operator and, if they agree, call again with confirmed_by_operator: true. Split a \
+            larger batch into several calls.
             """,
             schema: InputSchema.object([
                 "sessions": InputSchema.array(of: InputSchema.object([
@@ -87,7 +93,7 @@ extension ToolSpec {
                 ]), "The sessions to start."),
                 "mode": InputSchema.oneOf(modes, "Every session's Devin mode, over the sessions' own."),
                 "resumable": InputSchema.boolean("Keep each session's machine when it stops, so a reply can wake it. Default true."),
-                "confirmed_by_operator": InputSchema.boolean("True only after the operator agreed to start more than \(startBatchLimit) sessions in this call."),
+                "confirmed_by_operator": InputSchema.boolean("True only after the operator agreed to start more than \(startBatchLimit) sessions in this call, at most \(startBatchCeiling)."),
             ], required: ["sessions"]),
             annotations: .init(readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: true)
         ) { (input: StartInput, kick: DevinKick) async throws(KickError) -> ToolReply in
@@ -107,19 +113,17 @@ extension ToolSpec {
                     lines.append(ToolReply.failure("sessions[\(index)] (\(request.name))", error))
                 }
             }
+            let ids = started.map { "\"\($0.run.runID)\"" }.joined(separator: ", ")
             let failed = requests.count - started.count
-            // Up to the batch limit the next step names every run id; a confirmed larger batch's
-            // ids would outgrow the cap (Devin Review, PR #13), so it points at the lines instead.
-            let wait = started.count <= startBatchLimit
-                ? "call kick_wait with ids [\(started.map { "\"\($0.run.runID)\"" }.joined(separator: ", "))],"
-                : "call kick_wait with the run ids above, at most \(startBatchLimit) per call,"
+            // The next step names every run id: the cap keeps it whole up to the ceiling's 64, so
+            // a run whose line is cut keeps its handle (Devin Review, PR #13).
             return ToolReply(
                 lines: ["started \(started.count) of \(requests.count):"] + lines,
                 next: started.isEmpty
                     ? "next: fix what each line says, then call kick_start again."
-                    : "next: \(wait) and again until every session has settled."
+                    : "next: call kick_wait with ids [\(ids)], and again until every session has settled."
                         + (failed > 0 ? " The ones that failed did not start: fix them and start them again." : ""),
-                rest: "kick_status with a tag every session of the batch carries (`kick list --tag kick` in a shell)",
+                rest: "kick_status with the run ids of the next step shows each run",
                 isError: started.isEmpty
             )
         }
@@ -129,6 +133,10 @@ extension ToolSpec {
     /// usage error names the session and nothing is sent.
     static func prepare(_ input: StartInput, kick: DevinKick, bypassApproval: Bool) throws(KickError) -> [SessionRequest] {
         guard !input.sessions.isEmpty else { throw .usage("sessions is empty: give at least one session to start.") }
+        // The ceiling first, so a model isn't sent to ask the operator for a batch they can't allow.
+        guard input.sessions.count <= startBatchCeiling else {
+            throw .usage("\(input.sessions.count) sessions in one call is over the ceiling of \(startBatchCeiling), even with the operator's confirmation, and nothing was started. Split the batch into calls of at most \(startBatchLimit), or of at most \(startBatchCeiling) with the operator's confirmation.")
+        }
         guard input.sessions.count <= startBatchLimit || input.confirmedByOperator == true else {
             throw .usage("\(input.sessions.count) sessions in one call is over the limit of \(startBatchLimit), and nothing was started. Split the batch into calls of at most \(startBatchLimit), or ask the operator and, if they agree, call again with confirmed_by_operator: true.")
         }

@@ -131,10 +131,33 @@ struct SideToolsTests {
         #expect(!confirmed.isError)
         #expect(confirmed.text.hasPrefix("started 21 of 21:"))
         #expect(await transport.count("create_session") == 21)
-        // Above the limit the next step points at the lines rather than naming every id, and the
-        // result keeps to the cap (Devin Review, PR #13).
         #expect(confirmed.text.utf8.count <= ResultCap.maximumBytes)
-        #expect(confirmed.text.hasSuffix("next: call kick_wait with the run ids above, at most 20 per call, and again until every session has settled."))
+    }
+
+    /// Confirmed, a batch goes up to 64 sessions and no further (owner, 2026-10-19): its next step
+    /// names every run id within the cap, so a run whose line is cut keeps its handle (Devin
+    /// Review, PR #13). Past the ceiling nothing is sent, confirmed or not.
+    @Test func aConfirmedBatchStopsAtTheCeilingAndKeepsEveryRunID() async throws {
+        let sandbox = try Sandbox()
+        let transport = ScriptedTransport(["get_automation_schemas": [Self.schemas], "create_session": [.json(Fixture.session())]])
+        let kick = try sandbox.kick(transport)
+        let toolbox = Self.toolbox(kick)
+        func sessions(_ count: Int) -> Value { .array(Array(repeating: Value.object(["prompt": "Do nothing."]), count: count)) }
+        for confirmed in [false, true] {
+            let refused = try await toolbox.reply("kick_start", ["sessions": sessions(ToolSpec.startBatchCeiling + 1), "confirmed_by_operator": .bool(confirmed)])
+            #expect(refused.isError)
+            #expect(refused.text.contains("over the ceiling of 64, even with the operator's confirmation"))
+        }
+        #expect(await transport.sent.isEmpty)
+
+        let full = try await toolbox.reply("kick_start", ["sessions": sessions(ToolSpec.startBatchCeiling), "confirmed_by_operator": true])
+        #expect(!full.isError)
+        #expect(full.text.utf8.count <= ResultCap.maximumBytes)
+        let next = try #require(full.text.split(separator: "\n").last)
+        #expect(next.hasPrefix("next: call kick_wait with ids ["))
+        let runIDs = await kick.store.runs(tagged: "kick").map(\.runID)
+        #expect(runIDs.count == ToolSpec.startBatchCeiling)
+        #expect(runIDs.allSatisfy { next.contains("\"\($0)\"") })
     }
 
     /// Every session is checked before the first is started: one bad session starts nothing.

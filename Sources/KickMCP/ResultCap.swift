@@ -4,20 +4,24 @@ enum ResultCap {
     /// The most UTF-8 bytes of text in one tool result: 4 KB.
     static let maximumBytes = 4 * 1024
 
-    /// The most bytes the next step keeps when a result is cut, and separately the note's
-    /// pointer to the rest: a quarter of the cap each, so the lines keep the rest of the room and
-    /// the whole stays within the cap however long either is (Devin Review, PR #13).
-    static let tailBytes = maximumBytes / 4
+    /// The most bytes the next step keeps when a result is cut: half the cap, room for a 64-session
+    /// batch's run ids (about 1.6 KB), so no run of a batch loses its handle (owner, 2026-10-19).
+    static let nextBytes = maximumBytes / 2
+
+    /// The most bytes the note's pointer to the rest keeps when a result is cut: a quarter of the
+    /// cap. With ``nextBytes`` it bounds what the lines must leave, so the whole stays within the
+    /// cap however long either is (Devin Review, PR #13).
+    static let restBytes = maximumBytes / 4
 
     /// The reply as text: its lines, then its next step. Over the cap, whole lines are kept
     /// while they fit, then a note says how many were left out and where the rest is. The next
-    /// step is always kept, cut within only if it alone is longer than ``tailBytes``. A single
+    /// step is always kept, cut within only if it alone is longer than ``nextBytes``. A single
     /// line longer than the room left is cut within.
     static func apply(_ reply: ToolReply) -> String {
         let whole = (reply.lines + (reply.next.map { [$0] } ?? [])).joined(separator: "\n")
         guard whole.utf8.count > maximumBytes else { return whole }
-        let next = reply.next.map { [bounded($0, to: tailBytes)] } ?? []
-        let rest = bounded(reply.rest, to: tailBytes)
+        let next = reply.next.map { [bounded($0, to: nextBytes)] } ?? []
+        let rest = bounded(reply.rest, to: restBytes)
         // The longest note this reply could need bounds the room the lines leave for it.
         let longestNote = max(note(leftOut: reply.lines.count, rest: rest).utf8.count, note(leftOut: 0, rest: rest).utf8.count)
         let reserved = longestNote + next.reduce(0) { $0 + $1.utf8.count + 1 } + 1
