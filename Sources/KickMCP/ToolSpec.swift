@@ -38,6 +38,15 @@ struct ToolReply: Sendable, Equatable {
     static func failure(_ name: String, _ error: KickError) -> String {
         "\(name): \(error.localizedDescription) (\(status(of: error)))"
     }
+
+    /// The most characters of a message a result quotes: its first line, at most this long.
+    static let messageLength = 160
+
+    /// `2026-10-18 14:05  devin  The first line…`: never the whole message (plan decision 5).
+    static func compact(_ message: SessionMessage) -> String {
+        let line = message.compactLine
+        return line.count > messageLength ? String(line.prefix(messageLength)) + "…" : line
+    }
 }
 
 /// One tool (amendment A17): its definition, and a handler from the call's arguments to a reply.

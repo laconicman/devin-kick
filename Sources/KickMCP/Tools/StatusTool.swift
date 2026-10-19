@@ -37,8 +37,6 @@ extension ToolReply {
     /// The most a status reply waits for its working sessions' latest messages: a nicety, which
     /// must never bring a call near the client's time limit.
     static let latestMessageBudget: Duration = .seconds(10)
-    /// The most characters of a latest message a status line quotes.
-    static let latestMessageLength = 120
 
     /// `readings` as kick_status and kick_wait show them (plan decision 6): the Kit's status line
     /// for each, a working one with its latest message's first line, never the transcript; then
@@ -106,8 +104,8 @@ extension ToolReply {
         return await withTaskGroup(of: Arrival.self) { group in
             for id in ids {
                 group.addTask {
-                    guard let line = try? await kick.messages(id, last: 1).last?.compactLine else { return .unread }
-                    return .message(id: id, line: line.count > latestMessageLength ? String(line.prefix(latestMessageLength)) + "…" : line)
+                    guard let message = try? await kick.messages(id, last: 1).last else { return .unread }
+                    return .message(id: id, line: compact(message))
                 }
             }
             group.addTask {

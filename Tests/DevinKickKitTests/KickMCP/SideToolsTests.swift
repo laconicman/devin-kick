@@ -33,7 +33,10 @@ struct SideToolsTests {
 
     static func toolbox(_ kick: DevinKick, bypassApproval: Bool = true, maxWait: Duration = DevinKick.maximumWait) -> Toolbox {
         Toolbox(
-            specs: [.upload, .start(bypassApproval: bypassApproval), .status, .wait(maximum: maxWait)],
+            specs: [
+                .upload, .start(bypassApproval: bypassApproval), .status, .wait(maximum: maxWait),
+                .save, .messages, .reply, .archive,
+            ],
             kick: .success(kick)
         )
     }
@@ -245,5 +248,113 @@ struct SideToolsTests {
         #expect(!isError)
         #expect(text.contains("\noverall: done (status 0)\nnext: kick_save the done ones"))
         #expect(sleeps.delays == [.seconds(15)])
+    }
+
+    // MARK: - kick_save, kick_messages, kick_reply, kick_archive
+
+    /// Each run directory, its files with their sizes, and the result's keys; never the result.
+    @Test func saveNamesTheFilesAndTheResultsShapeNeverTheResult() async throws {
+        let sandbox = try Sandbox()
+        let output = #"{"answer_md":"the secret answer","doubts":[],"questions_for_user":[],"kick_final":true}"#
+        let transport = ScriptedTransport([
+            "get_session": [.json(Fixture.session(id: Self.idA, detail: "waiting_for_user", output: output))],
+            "get_session_messages": [.json(#"{"items":[\#(SaveTests.message("hello", at: 1, source: "user"))],"has_next_page":false}"#)],
+            "get_session_attachments": [.json("[]")],
+        ])
+        let (text, isError) = try await Self.toolbox(try sandbox.kick(transport)).reply("kick_save", ["ids": [.string(Self.idA)]])
+        #expect(!isError)
+        #expect(!text.contains("secret"))
+        let lines = text.split(separator: "\n").map(String.init)
+        let fields = try #require(lines.first).components(separatedBy: "  ")
+        #expect(fields.dropFirst().prefix(2) == [Self.idA, "done"])
+        let directory = try #require(fields.last)
+        for name in ["session.json", "result.json", "messages.json"] {
+            let size = try #require(try FileManager.default.attributesOfItem(atPath: directory + "/" + name)[.size] as? Int)
+            #expect(lines.contains("  \(name)  \(size) B"))
+        }
+        #expect(lines.contains("  result.json: kick_final true; keys answer_md, doubts, kick_final, questions_for_user"))
+        #expect(lines.last == "next: read result.json in each run directory; kick_archive the sessions you are done with.")
+    }
+
+    /// One session that can't be saved is its line; the others are saved.
+    @Test func aSaveThatFailsForOneSessionSavesTheOthers() async throws {
+        let sandbox = try Sandbox()
+        let transport = ScriptedTransport([
+            "get_session": [.dynamic { sent in
+                (sent.request.path ?? "").contains(Self.idA)
+                    ? .response(status: 404, body: Fixture.problem(status: 404, detail: "not found"))
+                    : .json(Fixture.session(id: Self.idB, detail: "waiting_for_user", output: Self.finalOutput))
+            }],
+            "get_session_messages": [.json(#"{"items":[],"has_next_page":false}"#)],
+            "get_session_attachments": [.json("[]")],
+        ])
+        let (text, isError) = try await Self.toolbox(try sandbox.kick(transport)).reply("kick_save", ["ids": [.string(Self.idA), .string(Self.idB)]])
+        #expect(!isError)
+        #expect(text.hasPrefix("\(Self.idA): Devin answered 404: not found"))
+        #expect(text.contains("(status 1: failed)\n"))
+        #expect(text.contains("  \(Self.idB)  done  "))
+    }
+
+    /// The latest messages' first lines, each cut to a quotable length: never a whole message.
+    @Test func messagesShowTheLatestFirstLinesOnly() async throws {
+        let sandbox = try Sandbox()
+        let items = (1...12).map { SaveTests.message(#"message \#($0)\nsecond line"#, at: 1_791_900_000 + $0) }
+            + [SaveTests.message(String(repeating: "word ", count: 60), at: 1_791_900_100)]
+        let transport = ScriptedTransport(["get_session_messages": [.json(#"{"items":[\#(items.joined(separator: ","))],"has_next_page":false}"#)]])
+        let (text, isError) = try await Self.toolbox(try sandbox.kick(transport)).reply("kick_messages", ["id": .string(Self.idA)])
+        #expect(!isError)
+        let lines = text.split(separator: "\n").map(String.init)
+        #expect(lines.count == ToolSpec.messagesShown + 1)
+        #expect(lines.first?.hasSuffix("  devin  message 4") == true)
+        #expect(!text.contains("second line"))
+        #expect(lines[ToolSpec.messagesShown - 1].count == ToolReply.messageLength + 1)
+        #expect(lines[ToolSpec.messagesShown - 1].hasSuffix("…"))
+    }
+
+    @Test func replyPostsAFileThenShowsTheStatus() async throws {
+        let sandbox = try Sandbox()
+        let transport = ScriptedTransport([
+            "get_session": [.json(Fixture.session(id: Self.idA, detail: "waiting_for_user"))],
+            "post_message": [.json(Fixture.session(id: Self.idA))],
+        ])
+        let toolbox = Self.toolbox(try sandbox.kick(transport))
+        let (text, isError) = try await toolbox.reply("kick_reply", ["id": .string(Self.idA), "file": .string(sandbox.prompt.path)])
+        #expect(!isError)
+        let lines = text.split(separator: "\n").map(String.init)
+        #expect(lines.first == "posted to \(Self.idA)")
+        #expect(lines[1].hasPrefix("\(Self.idA)  needs-input  running/waiting_for_user"))
+        #expect(lines.last == "next: call kick_wait with ids [\"\(Self.idA)\"], and again until it settles.")
+        let body = try Self.body(try #require(await transport.bodies("post_message").first))
+        #expect(body["message"] as? String == "Summarise the notes.\n")
+
+        let both = try await toolbox.reply("kick_reply", ["id": .string(Self.idA), "text": "a", "file": "b"])
+        #expect(both.isError)
+        #expect(both.text.hasPrefix("Give exactly one of text and file."))
+    }
+
+    @Test func aReplyToAnEndedSessionIsRefused() async throws {
+        let sandbox = try Sandbox()
+        let transport = ScriptedTransport(["get_session": [.json(Fixture.session(id: Self.idA, status: "exit", detail: nil))]])
+        let (text, isError) = try await Self.toolbox(try sandbox.kick(transport)).reply("kick_reply", ["id": .string(Self.idA), "text": "still there?"])
+        #expect(isError)
+        #expect(text == "Session \(Self.idA) has ended (exit): a reply can't reach it. Start a new session.\nstatus 1: failed")
+        #expect(await transport.count("post_message") == 0)
+    }
+
+    /// Archive puts sessions away and never ends one: no argument asks for that.
+    @Test func archiveArchivesAndNeverTerminates() async throws {
+        let sandbox = try Sandbox()
+        let transport = ScriptedTransport([
+            "archive_session": [.json(Fixture.session(id: Self.idA, status: "running", detail: "waiting_for_user"))],
+            "get_session": [.json(Fixture.session(id: Self.idA, status: "suspended", detail: "user_request"))],
+        ])
+        let toolbox = Self.toolbox(try sandbox.kick(transport))
+        let (text, isError) = try await toolbox.reply("kick_archive", ["ids": [.string(Self.idA)]])
+        #expect(!isError)
+        #expect(text.hasPrefix("\(Self.idA)  archived  suspended/user_request\n"))
+        let refused = try await toolbox.reply("kick_archive", ["ids": [.string(Self.idA)], "terminate": true])
+        #expect(refused.isError)
+        #expect(refused.text.contains("Unknown argument terminate"))
+        #expect(await transport.count("terminate_session") == 0)
     }
 }

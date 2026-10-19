@@ -40,7 +40,6 @@ struct RunCommand: AsyncParsableCommand {
             for result in completed {
                 if let saved = result.saved {
                     emit(saved.line + (result.archived ? "  [archived]" : ""))
-                    TSVLog.append(saved)
                 }
                 if let error = result.error { printError("\(result.started.run.runID): \(error.localizedDescription)") }
             }
