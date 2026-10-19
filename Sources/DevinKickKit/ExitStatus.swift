@@ -15,6 +15,12 @@ public enum ExitStatus {
         (78, "configuration error"),
     ]
 
+    /// What `code` means, as ``rows`` states it; `nil` for a status kick doesn't document. The
+    /// MCP server quotes it beside an error, so a model reads the contract a shell does.
+    public static func meaning(of code: Int32) -> String? {
+        rows.first { $0.code == code }?.meaning
+    }
+
     /// The table for `kick --help`.
     public static var help: String {
         rows.map { row in
