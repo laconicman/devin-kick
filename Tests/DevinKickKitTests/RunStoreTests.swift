@@ -183,6 +183,23 @@ struct RunStoreTests {
         #expect(await store.runs().keys.sorted() == [replacement.runID])
     }
 
+    /// An index replaced by a longer one is read again too: the byte before the offset is no
+    /// longer the newline the last read ended on (swe-2-max review, 2026-10-19).
+    @Test func anIndexReplacedByALongerOneIsReadAgain() async throws {
+        let root = temporaryDirectory()
+        let store = RunStore(root: root)
+        var first = Self.run(in: root)
+        first.title = "short"
+        try await store.append(IndexEvent(.requested, run: first))
+        #expect(await store.runs().count == 1)
+        let index = root.appending(path: "index.jsonl")
+        var replacements = [Self.run(in: root), Self.run(in: root)]
+        replacements[0].title = String(repeating: "a much longer title ", count: 10)
+        let lines = try replacements.map { try RunStore.encoder.encode(IndexEvent(.requested, run: $0)) + Data("\n".utf8) }
+        try lines.reduce(Data(), +).write(to: index)
+        #expect(await store.runs().keys.sorted() == replacements.map(\.runID).sorted())
+    }
+
     /// 300 ids within one fixed second: past the birthday bound of 65,536 suffixes, so a draw
     /// collides with an id the index holds (p ≈ 0.5); every id handed out must still be new.
     @Test func aNewRunIDIsNeverOneTheIndexHolds() async throws {
