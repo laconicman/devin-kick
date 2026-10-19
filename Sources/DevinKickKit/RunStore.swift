@@ -127,7 +127,19 @@ public actor RunStore {
 
     /// Writes `request.json`. It throws: without it a run can't be retried faithfully.
     func writeRequest(_ data: Data, in directory: URL) throws(KickError) {
-        let url = directory.appending(path: "request.json")
+        try writeSubmitRecord(data, to: directory.appending(path: "request.json"))
+    }
+
+    /// Writes an inline prompt as `prompt.md`, byte for byte, and returns its URL. It throws:
+    /// `request.json` names it as the run's prompt file.
+    func writePrompt(_ text: String, in directory: URL) throws(KickError) -> URL {
+        let url = directory.appending(path: "prompt.md")
+        try writeSubmitRecord(Data(text.utf8), to: url)
+        return url
+    }
+
+    /// A file of the record written before the POST: a failure stops the start.
+    private func writeSubmitRecord(_ data: Data, to url: URL) throws(KickError) {
         do {
             try data.write(to: url, options: .atomic)
         } catch {

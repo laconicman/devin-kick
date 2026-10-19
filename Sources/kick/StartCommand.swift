@@ -89,7 +89,7 @@ struct StartCommand: AsyncParsableCommand {
 
 extension SessionRequest {
     /// How a failure names the request: its title, or its prompt file.
-    var name: String { title ?? promptFile.lastPathComponent }
+    var name: String { title ?? promptFile?.lastPathComponent ?? "an inline prompt" }
 }
 
 extension StartedRun {

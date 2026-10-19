@@ -79,6 +79,43 @@ struct StartTests {
         #expect(index.last?.contains(#""event":"created""#) == true)
     }
 
+    /// An inline prompt (the MCP server's `kick_start`) is written into the run directory as
+    /// `prompt.md` before `request.json`, which names it: the file, the first message and the
+    /// text given match byte for byte, as a run from a file does.
+    @Test func anInlinePromptIsRecordedAsPromptMD() async throws {
+        let sandbox = try Sandbox()
+        let transport = ScriptedTransport([
+            "get_automation_schemas": [Self.schemas],
+            "create_session": [.json(Fixture.session())],
+        ])
+        let kick = try sandbox.kick(transport)
+        let request = try kick.prepare(
+            .text(Sandbox.promptText), title: nil, schemaFile: nil, attach: [], mode: nil, tags: ["devin-kick-test"],
+            options: StartOptions()
+        )
+        #expect(request.promptFile == nil)
+        let started = try await kick.start(request)
+
+        let file = started.run.directory.appending(path: "prompt.md")
+        #expect(try Data(contentsOf: file) == Data(Sandbox.promptText.utf8))
+        let sent = try Self.body(try #require(await transport.bodies("create_session").first))
+        #expect(sent["prompt"] as? String == Sandbox.promptText)
+        let record = try Self.body(Data(contentsOf: started.run.directory.appending(path: "request.json")))
+        #expect(record["prompt_file"] as? String == file.path)
+        let files = try FileManager.default.contentsOfDirectory(atPath: started.run.directory.path)
+        #expect(Set(files) == ["prompt.md", "request.json", "session.json"])
+        // Untitled, the run directory is named after the prompt's first line.
+        #expect(started.run.directory.lastPathComponent.contains("summarise-the-three-linked-lectures"))
+    }
+
+    @Test func anEmptyInlinePromptIsAUsageError() throws {
+        let sandbox = try Sandbox()
+        let kick = try sandbox.kick(ScriptedTransport([:]))
+        #expect(throws: KickError.usage("The prompt is empty.")) {
+            try kick.prepare(.text(""), title: nil, schemaFile: nil, attach: [], mode: nil, tags: [], options: StartOptions())
+        }
+    }
+
     /// The request is on disk before the POST: a create that never answers leaves an orphan
     /// with its request, never nothing.
     @Test func aLostAnswerIsFoundByRunTagWithoutCreatingAgain() async throws {
