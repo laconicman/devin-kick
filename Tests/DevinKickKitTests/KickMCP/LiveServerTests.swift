@@ -58,7 +58,7 @@ struct LiveServerTests {
         for _ in 0..<3 where !status.contains("\noverall: done") {
             status = try await call(client, "kick_wait", ["ids": [.string(runID)]])
         }
-        #expect(status.contains("\noverall: done (status 0)"), "\(status)")
+        #expect(status.contains("\noverall: done (status 0: done)"), "\(status)")
 
         let saved = try await call(client, "kick_save", ["ids": [.string(runID)]])
         #expect(saved.contains("result.json: kick_final true"))

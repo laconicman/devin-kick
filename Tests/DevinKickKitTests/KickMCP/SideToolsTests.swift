@@ -232,8 +232,8 @@ struct SideToolsTests {
         #expect(lines[0].hasPrefix("\(Self.idA)  done  running/waiting_for_user  final"))
         #expect(lines[1].hasPrefix("\(Self.idB)  working  running/working"))
         #expect(lines[1].hasSuffix("  devin  Reading the notes]"))
-        #expect(lines[2] == "overall: working (status 75) — done 1, working 1")
-        #expect(lines[3] == "next: not settled: call kick_wait again with the working ones; kick_save the done ones, then read result.json in each run directory.")
+        #expect(lines[2] == "overall: working (status 75: still working: poll again) — done 1, working 1")
+        #expect(lines[3] == "next: not settled: call kick_wait with the same ids, and again until they settle; kick_save the done ones, then read result.json in each run directory.")
         #expect(await transport.count("get_session_messages") == 1, "only the working session's")
     }
 
@@ -258,7 +258,7 @@ struct SideToolsTests {
         let sleeps = SleepRecorder()
         let (text, isError) = try await Self.toolbox(try sandbox.kick(transport, sleeps: sleeps)).reply("kick_wait", ["ids": [.string(Self.idA)]])
         #expect(!isError)
-        #expect(text.contains("\noverall: done (status 0)\nnext: kick_save the done ones"))
+        #expect(text.contains("\noverall: done (status 0: done)\nnext: kick_save the done ones"))
         #expect(sleeps.delays == [.seconds(15)])
     }
 

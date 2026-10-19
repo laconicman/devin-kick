@@ -25,7 +25,7 @@ extension ToolSpec {
             kick_status does. It returns as soon as every session has settled (until: all, the \
             default) or the first one has (until: any). If any is still working when the time is \
             up, call kick_wait again with the same ids: one call never waits longer, so it stays \
-            under the client's time limit.
+            under the client's time limit. \(readingsLegend)
             """,
             schema: InputSchema.object([
                 "ids": InputSchema.list("Run ids, session ids or run directories."),

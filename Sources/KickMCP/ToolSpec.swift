@@ -31,7 +31,12 @@ struct ToolReply: Sendable, Equatable {
 
     /// `status 69: no answer, or 429 / 5xx: retry`.
     static func status(of error: KickError) -> String {
-        "status \(error.exitCode): \(ExitStatus.meaning(of: error.exitCode) ?? "failed")"
+        status(error.exitCode)
+    }
+
+    /// `status 75: still working: poll again`: a status the CLI would exit with, and what it means.
+    static func status(_ code: Int32) -> String {
+        "status \(code): \(ExitStatus.meaning(of: code) ?? "failed")"
     }
 
     /// One item of a batch that failed: `name: message (status 64: usage error)`.

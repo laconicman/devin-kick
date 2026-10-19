@@ -7,17 +7,24 @@ extension ToolSpec {
         var tag: String?
     }
 
+    /// What kick_status and kick_wait return, in both descriptions: a model may load one tool's
+    /// description and not the other's (the dogfood, 2026-10-19).
+    static let readingsLegend = """
+    One line per session: session id; kick's state (done, working, needs-input, unknown, \
+    failed); Devin's own status/detail; kick's reading of the output (final, stale-final, \
+    provisional, none, unmarked); age; mode; title; notes in brackets, and a working session's \
+    latest message. Then the overall state, with the status the kick CLI would exit with and \
+    what it means, and the next step.
+    """
+
     /// `kick_status`: one read of each session, returned at once.
     static let status = ToolSpec(
         name: "kick_status",
         title: "Check Devin sessions",
         description: """
-        Show where sessions stand, one line each: id, state (done, working, needs-input, unknown, \
-        failed), Devin's status/detail, kick's reading of the output (final, stale-final, \
-        provisional, none, unmarked), age, mode and title; a working session adds its latest \
-        message's first line. Then the overall state and the next step. It reads once and returns \
-        at once: to wait for sessions to settle, call kick_wait. Name sessions by run id, session \
-        id or run directory, or give a tag.
+        Show where sessions stand. \(readingsLegend) It reads once and returns at once: to wait \
+        for sessions to settle, call kick_wait. Name sessions by run id, session id or run \
+        directory, or give a tag.
         """,
         schema: InputSchema.object([
             "ids": InputSchema.list("Run ids, session ids or run directories."),
@@ -48,11 +55,12 @@ extension ToolReply {
             return reading.line() + "  [latest: \(message)]"
         }
         let (label, code) = Reading.overall(readings)
-        var overall = "overall: \(label) (status \(code))"
+        var overall = "overall: \(label) (\(status(code)))"
         if readings.count > 1 { overall += " — " + counts(readings) }
+        // The rest is named as a call the model can make: it may have no shell.
         return ToolReply(
             lines: lines, next: overall + "\n" + nextStep(readings),
-            rest: "`kick status` with the same ids, in a shell, prints every line"
+            rest: "call again with fewer ids at a time (`kick status` in a shell prints every line)"
         )
     }
 
@@ -83,7 +91,8 @@ extension ToolReply {
         if asking { steps.append("needs-input asks or awaits an approval: read kick_messages, then answer with kick_reply") }
         if other { steps.append("for failed or unknown, kick_messages shows what Devin said last") }
         if unreadable { steps.append("an error line says what went wrong") }
-        if working { steps.append("not settled: call kick_wait again with the working ones") }
+        // The same ids, as kick_wait's description says; settled ones cost a read each, no wait.
+        if working { steps.append("not settled: call kick_wait with the same ids, and again until they settle") }
         if done { steps.append("kick_save the done ones, then read result.json in each run directory") }
         return "next: " + steps.joined(separator: "; ") + "."
     }
