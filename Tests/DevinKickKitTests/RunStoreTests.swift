@@ -129,6 +129,60 @@ struct RunStoreTests {
         #expect(warnings.all.isEmpty)
     }
 
+    /// A long-lived process (the MCP server) sees the runs another process records after its
+    /// first read, at the next lookup; its own appends, read back, fold to the same record.
+    @Test func anotherStoresAppendsAreSeenAtTheNextLookup() async throws {
+        let root = temporaryDirectory()
+        let (first, second) = (RunStore(root: root), RunStore(root: root))
+        let early = Self.run(in: root)
+        try await first.append(IndexEvent(.requested, run: early))
+        #expect(await first.runs().count == 1)
+
+        var other = Self.run(in: root)
+        try await second.append(IndexEvent(.requested, run: other))
+        other.sessionID = "00000000000000000000000000000002"
+        try await second.append(IndexEvent(.created, run: other))
+        #expect(await first.lookup(other.runID)?.sessionID == other.sessionID)
+        #expect(await first.lookup("00000000000000000000000000000002")?.runID == other.runID)
+        #expect(await first.runs(tagged: "kick").count == 2)
+
+        try await first.append(IndexEvent(.replied, run: early))
+        #expect(await first.lookup(early.runID)?.replied == true)
+        #expect(await first.lookup(early.runID)?.isOrphan == true)
+        #expect(await first.runs().count == 2)
+    }
+
+    /// A line another process is still writing is folded once its newline lands, never parsed
+    /// half-written.
+    @Test func aLineIsFoldedOnceItsNewlineLands() async throws {
+        let root = temporaryDirectory()
+        let warnings = WarningLog()
+        let store = RunStore(root: root, warn: warnings.sink)
+        try await store.append(IndexEvent(.requested, run: Self.run(in: root)))
+        #expect(await store.runs().count == 1)
+        let line = try RunStore.encoder.encode(IndexEvent(.requested, run: Self.run(in: root)))
+        let handle = try FileHandle(forWritingTo: root.appending(path: "index.jsonl"))
+        try handle.seekToEnd()
+        try handle.write(contentsOf: line.prefix(line.count / 2))
+        #expect(await store.runs().count == 1)
+        try handle.write(contentsOf: line.dropFirst(line.count / 2) + Data("\n".utf8))
+        try handle.close()
+        #expect(await store.runs().count == 2)
+        #expect(warnings.all.isEmpty)
+    }
+
+    /// An index shorter than what was read has been replaced: it is read again from its start.
+    @Test func aReplacedIndexIsReadAgainFromItsStart() async throws {
+        let root = temporaryDirectory()
+        let store = RunStore(root: root)
+        for _ in 0..<2 { try await store.append(IndexEvent(.requested, run: Self.run(in: root))) }
+        #expect(await store.runs().count == 2)
+        try FileManager.default.removeItem(at: root.appending(path: "index.jsonl"))
+        let replacement = Self.run(in: root)
+        try await RunStore(root: root).append(IndexEvent(.requested, run: replacement))
+        #expect(await store.runs().keys.sorted() == [replacement.runID])
+    }
+
     /// 300 ids within one fixed second: past the birthday bound of 65,536 suffixes, so a draw
     /// collides with an id the index holds (p ≈ 0.5); every id handed out must still be new.
     @Test func aNewRunIDIsNeverOneTheIndexHolds() async throws {

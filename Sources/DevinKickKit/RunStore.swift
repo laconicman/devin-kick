@@ -8,7 +8,9 @@ import System
 /// - `runs/<date>-<slug>-<run id>/`: `request.json`, `session.json`, `result.json`,
 ///   `messages.json` and `attachments/`. `--out` places a run directory elsewhere; the index
 ///   stays here and records absolute paths.
-/// - `index.jsonl`: one event per line, read once into a map by run id and session id.
+/// - `index.jsonl`: one event per line, read into a map by run id and session id. Each read of
+///   the map first folds in the lines other processes appended since (``TailReader``), so a
+///   long-lived process sees their runs before it mints a run id and at every lookup.
 /// - `uploads.jsonl`: the upload cache (`Upload`).
 ///
 /// Two write paths: `request.json` and the index throw ``KickError/store(_:)``, because a run
@@ -27,7 +29,11 @@ import System
 public actor RunStore {
     public let root: URL
     private let warn: Warn
-    private var cache: [String: RunState]?
+    private var cache: [String: RunState] = [:]
+    /// `index.jsonl` as read so far.
+    private var index: TailReader
+    /// The index lines read so far, so a warning can name an unreadable one by its number.
+    private var indexLines = 0
 
     public typealias Warn = @Sendable (String) -> Void
 
@@ -39,6 +45,7 @@ public actor RunStore {
     public init(root: URL, warn: @escaping Warn = RunStore.standardError) {
         self.root = root
         self.warn = warn
+        self.index = TailReader(url: root.appending(path: "index.jsonl"))
     }
 
     nonisolated var indexURL: URL { root.appending(path: "index.jsonl") }
@@ -79,9 +86,9 @@ public actor RunStore {
         return "\(formatter.string(from: date))-\(String(format: "%04x", UInt16.random(in: .min ... .max)))"
     }
 
-    /// A run id the index doesn't hold yet. Four hex digits give 65,536 ids a second, so a batch
-    /// minted within one second could collide (about 2 % for 50 runs); a collision would merge
-    /// two runs' records and their run tags, so it is re-minted.
+    /// A run id the index doesn't hold yet, other processes' runs included. Four hex digits give
+    /// 65,536 ids a second, so a batch minted within one second could collide (about 2 % for 50
+    /// runs); a collision would merge two runs' records and their run tags, so it is re-minted.
     func newRunID(at date: Date = Date()) -> String {
         let known = runs()
         var runID = Self.mintRunID(at: date)
@@ -191,28 +198,33 @@ public actor RunStore {
         try descriptor.closeAfter { _ = try descriptor.writeAll(line) }
     }
 
-    /// Every run the index knows, by run id. Read once; appends keep it current.
+    /// Every run the index knows, by run id. Each call first folds in the lines appended since
+    /// the last, by any process. This process's own appends are folded as they are written, and
+    /// read back later; folding an event again changes nothing, since each sets its fields from
+    /// the event, so the map ends as the file's order makes it.
     func runs() -> [String: RunState] {
-        if let cache { return cache }
-        cache = [:]
-        guard let data = try? Data(contentsOf: indexURL) else { return [:] }
-        for (number, line) in data.split(separator: UInt8(ascii: "\n")).enumerated() {
+        let (lines, restarted) = index.read()
+        if restarted {
+            cache = [:]
+            indexLines = 0
+        }
+        for line in lines {
+            indexLines += 1
             guard let event = try? Self.decoder.decode(IndexEvent.self, from: line) else {
-                warn("\(indexURL.path) line \(number + 1) is unreadable; skipped.")
+                warn("\(indexURL.path) line \(indexLines) is unreadable; skipped.")
                 continue
             }
             fold(event)
         }
-        return cache ?? [:]
+        return cache
     }
 
     private func fold(_ event: IndexEvent) {
-        guard cache != nil else { return }
-        if var run = cache?[event.runID] {
+        if var run = cache[event.runID] {
             run.apply(event)
-            cache?[event.runID] = run
+            cache[event.runID] = run
         } else {
-            cache?[event.runID] = RunState(event: event)
+            cache[event.runID] = RunState(event: event)
         }
     }
 
