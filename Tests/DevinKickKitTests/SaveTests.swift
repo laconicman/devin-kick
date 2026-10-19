@@ -141,6 +141,23 @@ struct SaveTests {
         #expect(warnings.all.first?.contains("KICK_LOG_TSV") == true)
     }
 
+    /// Two first saves at once, which both saw no log, write one header: the log is linked into
+    /// place whole, and the second link is refused (Devin Review, PR #13).
+    @Test func twoFirstWritesToTheTSVLogLeaveOneHeader() async throws {
+        let directory = temporaryDirectory()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        for round in 0..<20 {
+            let log = directory.appending(path: "runs-\(round).tsv")
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for _ in 0..<2 { group.addTask { try TSVLog.create(log) } }
+                try await group.waitForAll()
+            }
+            #expect(try String(contentsOf: log, encoding: .utf8) == TSVLog.header.joined(separator: "\t") + "\n")
+        }
+        let drafts = try FileManager.default.contentsOfDirectory(atPath: directory.path).filter { $0.hasPrefix(".") }
+        #expect(drafts.isEmpty)
+    }
+
     /// A save without output removes an earlier result.json rather than leaving it to read as
     /// the current result (PR #11 review, r4308714874).
     @Test func aSaveWithoutOutputRemovesTheStaleResult() async throws {
