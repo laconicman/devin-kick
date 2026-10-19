@@ -233,6 +233,11 @@ struct StatusTests {
         await #expect(throws: KickError.usage("No session carries the tag none.")) { try await kick.status([], tag: "none") }
         await transport.script("get_sessions", [.json(Fixture.page([Fixture.session(id: Self.idB, tags: ["t"])]))])
         #expect(try await kick.status([Self.idA], tag: "t").map { $0.session?.id } == [Self.idA, Self.idB])
+        // A session named and tagged is read once (swe-2-max review, 2026-10-19).
+        await transport.script("get_sessions", [.json(Fixture.page([
+            Fixture.session(id: Self.idA, tags: ["t"]), Fixture.session(id: Self.idB, tags: ["t"]),
+        ]))])
+        #expect(try await kick.status([Self.idA], tag: "t").map { $0.session?.id } == [Self.idA, Self.idB])
     }
 
     @Test(arguments: [Duration.zero, .seconds(241)])

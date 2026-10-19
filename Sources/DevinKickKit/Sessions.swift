@@ -135,9 +135,10 @@ extension DevinKick {
         return Reading(argument: argument, run: run, session: nil, verdict: nil, outcome: .settled(settlement))
     }
 
-    /// Where `arguments` stand, then every session on the server carrying `tag`: `kick status`
-    /// and `kick_status`. Runs whose create's answer was lost are first looked for by their run
-    /// tag. A tag no session carries is a usage error when nothing else was named.
+    /// Where `arguments` stand, then every other session on the server carrying `tag`: `kick
+    /// status` and `kick_status`. A session both named and tagged is read once, so the overall
+    /// state counts it once. Runs whose create's answer was lost are first looked for by their
+    /// run tag. A tag no session carries is a usage error when nothing else was named.
     public func status(_ arguments: [String], tag: String? = nil) async throws(KickError) -> [Reading] {
         await reconcileOrphans()
         var readings: [Reading] = []
@@ -147,7 +148,8 @@ extension DevinKick {
         if let tag {
             let tagged = try await observe(tagged: tag)
             guard !tagged.isEmpty || !readings.isEmpty else { throw .usage("No session carries the tag \(tag).") }
-            readings += tagged
+            let named = Set(readings.compactMap { $0.session?.id })
+            readings += tagged.filter { reading in reading.session.map { !named.contains($0.id) } ?? true }
         }
         return readings
     }
