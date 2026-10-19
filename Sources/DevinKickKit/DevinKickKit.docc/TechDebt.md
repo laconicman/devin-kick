@@ -142,8 +142,8 @@ on the next re-vendor anyway.
 
 ### TD-9 — swift-sdk reads a data-URL string argument as bytes — *open (upstream)*
 
-Tracked upstream in modelcontextprotocol/swift-sdk#277 (open); fixes are proposed in #278 and
-#295, both open.
+Tracked in [#14](https://github.com/laconicman/devin-kick/issues/14); upstream in
+modelcontextprotocol/swift-sdk#277 (open), with fixes proposed in #278 and #295, both open.
 
 swift-sdk 0.12.1's `Value.init(from:)` decodes any JSON string that is a whole data URL
 (`data:`, anything, a comma, anything) into `Value.data`, and re-encodes it as
@@ -160,7 +160,7 @@ SDK's behaviour then fails, and the refusal goes with it.
 
 ### TD-10 — only kick_wait races its requests — *open*
 
-Not tracked by an issue yet.
+Tracked in [#15](https://github.com/laconicman/devin-kick/issues/15).
 
 A call stays short only while Devin answers (<doc:Design>, "Short calls and handles"). `wait`
 races each GET against its budget; every other call sends its requests as the CLI does, each
