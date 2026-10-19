@@ -176,8 +176,20 @@ struct SideToolsTests {
             ["prompt": "a", "title": "refused"], ["prompt": "b", "title": "fine"],
         ]])
         #expect(!isError)
-        #expect(text.hasPrefix("started 1 of 2:\nrefused: Devin answered 400: bad prompt (status 1: failed)"))
+        #expect(text.hasPrefix("started 1 of 2:\nsessions[0] (refused): Devin answered 400: bad prompt (status 1: failed)"))
         #expect(text.hasSuffix("The ones that failed did not start: fix them and start them again."))
+    }
+
+    /// Untitled inline prompts share a name, so a failed start is named by its index too
+    /// (swe-2-max review, 2026-10-19).
+    @Test func aFailedStartIsNamedByItsIndex() async throws {
+        let sandbox = try Sandbox()
+        let transport = ScriptedTransport([
+            "get_automation_schemas": [Self.schemas],
+            "create_session": [.json(Fixture.session()), .response(status: 400, body: Fixture.problem(status: 400, detail: "bad prompt"))],
+        ])
+        let (text, _) = try await Self.toolbox(try sandbox.kick(transport)).reply("kick_start", ["sessions": [["prompt": "a"], ["prompt": "b"]]])
+        #expect(text.contains("\nsessions[1] (an inline prompt): Devin answered 400: bad prompt (status 1: failed)\n"))
     }
 
     /// Bypass is the operator's choice at launch: no argument carries it.

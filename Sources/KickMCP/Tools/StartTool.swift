@@ -93,7 +93,7 @@ extension ToolSpec {
             let requests = try prepare(input, kick: kick, bypassApproval: bypassApproval)
             var lines: [String] = []
             var started: [StartedRun] = []
-            for request in requests {
+            for (index, request) in requests.enumerated() {
                 // A cancelled call starts nothing more; the one in flight is recorded either way.
                 guard !Task.isCancelled else { break }
                 do throws(KickError) {
@@ -101,7 +101,9 @@ extension ToolSpec {
                     started.append(run)
                     lines.append(run.line)
                 } catch {
-                    lines.append(ToolReply.failure(request.name, error))
+                    // Named by its index too, as a validation error is: untitled inline prompts
+                    // share a name (swe-2-max review, 2026-10-19).
+                    lines.append(ToolReply.failure("sessions[\(index)] (\(request.name))", error))
                 }
             }
             let ids = started.map { "\"\($0.run.runID)\"" }.joined(separator: ", ")
