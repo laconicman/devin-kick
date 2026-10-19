@@ -107,9 +107,9 @@ struct SideServerTests {
     /// The SDK runs each request in its own task: a status answers while a wait still waits.
     @Test(.timeLimit(.minutes(1)))
     func aStatusAnswersWhileAWaitWaits() async throws {
-        let (client, server, _) = try await Self.connect(.success(try DevinKick.scripted(Self.sessions(working: .seconds(2)))))
+        let (client, server, _) = try await Self.connect(.success(try DevinKick.scripted(Self.sessions(working: .seconds(3)))))
         let started = ContinuousClock.now
-        async let waited: (content: [Tool.Content], isError: Bool?) = client.callTool(name: "kick_wait", arguments: ["ids": [.string(Self.idA)], "timeout": 2])
+        async let waited: (content: [Tool.Content], isError: Bool?) = client.callTool(name: "kick_wait", arguments: ["ids": [.string(Self.idA)], "timeout": 4])
         try await Task.sleep(for: .milliseconds(100))
         let status: (content: [Tool.Content], isError: Bool?) = try await client.callTool(name: "kick_status", arguments: ["ids": [.string(Self.idB)]])
         let statusTook = ContinuousClock.now - started
@@ -118,6 +118,7 @@ struct SideServerTests {
         #expect(status.isError == false)
         #expect(wait.isError == false)
         #expect(statusTook < .milliseconds(1500))
+        // A 4 s timeout waits 2 s for the sessions and keeps the rest for their latest messages.
         #expect(waitTook >= .milliseconds(1900))
         await client.disconnect()
         await server.stop()

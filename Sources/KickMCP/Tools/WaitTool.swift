@@ -39,8 +39,12 @@ extension ToolSpec {
             guard timeout <= maximum else {
                 throw .usage("This server waits at most \(seconds) s per call (kick serve --max-wait); call kick_wait again to wait longer.")
             }
-            let readings = try await kick.wait(input.ids.items, until: input.until == .any ? .any : .all, timeout: timeout)
-            return await .readings(readings, kick: kick)
+            // One deadline for the whole call: working sessions' latest messages are read out of
+            // the wait's own budget, so the reply lands within `timeout`, which a registration may
+            // have set to its client's limit (Devin Review, PR #13).
+            let reserve = min(ToolReply.latestMessageBudget, timeout / 2)
+            let readings = try await kick.wait(input.ids.items, until: input.until == .any ? .any : .all, timeout: timeout - reserve)
+            return await .readings(readings, kick: kick, within: reserve)
         }
     }
 }

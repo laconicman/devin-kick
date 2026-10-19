@@ -432,7 +432,9 @@ them; the folds are idempotent, so the index stays right, only noisier.
 - **Waits stay under the client's limit.** `kick_wait` waits at most `--max-wait` (1 to 240 s,
   240 by default); a longer `timeout` is a usage error saying to call again, which teaches the
   bound where a clamp would hide it. A still-working session's line carries its latest message's
-  first line, fetched within 10 s, never the transcript (deepwiki-mcp's TD-10).
+  first line, never the transcript (deepwiki-mcp's TD-10), read within 10 s and, in a wait, out
+  of the wait's own budget, so the reply lands within the timeout a registration may have set to
+  its client's limit.
 - **A cancelled call gets no response.** The SDK sends none when the handler ends in
   `CancellationError`. A start's POST and its recording finish in the shield (<doc:TechDebt>
   TD-6), a cancelled batch starts nothing more, a cancelled wait stops polling, and the funnel

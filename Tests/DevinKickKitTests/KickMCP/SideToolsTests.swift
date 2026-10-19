@@ -262,6 +262,22 @@ struct SideToolsTests {
         #expect(sleeps.delays == [.seconds(15)])
     }
 
+    /// One deadline bounds the whole wait, working sessions' latest messages included: a message
+    /// read that hangs can't hold the reply past the timeout (Devin Review, PR #13).
+    @Test(.timeLimit(.minutes(1)))
+    func aWaitAnswersWithinItsTimeoutWhenAMessageReadHangs() async throws {
+        let sandbox = try Sandbox()
+        let transport = ScriptedTransport([
+            "get_session": [.json(Fixture.session(id: Self.idA, detail: "working"))],
+            "get_session_messages": [.delayed(.seconds(30), .json(#"{"items":[],"has_next_page":false}"#))],
+        ])
+        let started = ContinuousClock.now
+        let (text, isError) = try await Self.toolbox(try sandbox.kick(transport)).reply("kick_wait", ["ids": [.string(Self.idA)], "timeout": 2])
+        #expect(ContinuousClock.now - started < .seconds(3))
+        #expect(!isError)
+        #expect(text.contains("\noverall: working (status 75: still working: poll again)\n"))
+    }
+
     // MARK: - kick_save, kick_messages, kick_reply, kick_archive
 
     /// Each run directory, its files with their sizes, and the result's keys; never the result.

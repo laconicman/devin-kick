@@ -46,10 +46,11 @@ extension ToolReply {
     static let latestMessageBudget: Duration = .seconds(10)
 
     /// `readings` as kick_status and kick_wait show them (plan decision 6): the Kit's status line
-    /// for each, a working one with its latest message's first line, never the transcript; then
-    /// the batch's overall state and the next step, which the cap never cuts.
-    static func readings(_ readings: [Reading], kick: DevinKick) async -> ToolReply {
-        let latest = await latestMessages(of: readings, kick: kick)
+    /// for each, a working one with its latest message's first line, read within `budget` and
+    /// never the transcript; then the batch's overall state and the next step, which the cap
+    /// never cuts.
+    static func readings(_ readings: [Reading], kick: DevinKick, within budget: Duration = latestMessageBudget) async -> ToolReply {
+        let latest = await latestMessages(of: readings, kick: kick, within: budget)
         let lines = readings.map { reading in
             guard let id = reading.session?.id, let message = latest[id] else { return reading.line() }
             return reading.line() + "  [latest: \(message)]"
@@ -98,8 +99,8 @@ extension ToolReply {
     }
 
     /// The first line of each working session's latest message, by session id, for as long as
-    /// ``latestMessageBudget`` allows; one that can't be read is left out.
-    static func latestMessages(of readings: [Reading], kick: DevinKick) async -> [String: String] {
+    /// `budget` allows; one that can't be read in time is left out.
+    static func latestMessages(of readings: [Reading], kick: DevinKick, within budget: Duration) async -> [String: String] {
         let ids = readings.compactMap { reading -> String? in
             guard case .settled(.working) = reading.outcome else { return nil }
             return reading.session?.id
@@ -118,7 +119,7 @@ extension ToolReply {
                 }
             }
             group.addTask {
-                try? await Task.sleep(for: latestMessageBudget)
+                try? await Task.sleep(for: budget)
                 return .timeUp
             }
             var latest: [String: String] = [:]
