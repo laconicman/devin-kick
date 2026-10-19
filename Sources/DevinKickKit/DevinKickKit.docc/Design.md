@@ -285,8 +285,9 @@ places run directories elsewhere; the index stays central and records absolute p
   create shows it as unknown.
 - `KICK_LOG_TSV`, when set, gets fstec's 9 columns for every run that settles: a report of
   settled runs, since status and ACUs exist only then, unlike `UsageLog`'s line at submit; the
-  index is the record of every run. ``DevinKick/save(_:)`` writes it, so `kick save`, `kick run`
-  and `kick_save` each log a settled run once. It is a derived file: a write that fails warns.
+  index is the record of every run. ``DevinKick/save(_:)`` writes it, so whichever face saves
+  logs; a run saved twice, or before it settled, has a line per save, as M1's `kick save` gave
+  it. It is a derived file: a write that fails warns.
   Until M2 it lived in the executable and swallowed its failures, as deepwiki-mcp's `UsageLog`
   does, out of the server's reach.
 

@@ -1,12 +1,13 @@
 import Foundation
 
-/// The optional run log: when `KICK_LOG_TSV` names a file, every run that settles appends one
-/// line in the 9 columns fstec's `devin.py` already keeps:
+/// The optional run log: when `KICK_LOG_TSV` names a file, every save appends one line in the
+/// 9 columns fstec's `devin.py` already keeps:
 /// `date title session_id url mode status status_detail acus attachments`, with a header when
 /// the file is new.
 ///
-/// ``DevinKick/save(_:)`` writes it, so `kick save`, `kick run` and the MCP server's `kick_save`
-/// each log a settled run once, and neither face can forget to. It is a derived file: a write
+/// ``DevinKick/save(_:)`` writes it, so whichever face saves logs (`kick save`, `kick run` as each
+/// run ends, the MCP server's `kick_save`), and none can forget to. A run saved twice, or before
+/// it settled, has a line per save, as M1's `kick save` gave it. It is a derived file: a write
 /// that fails only warns, since a log line must never break a result. Adapted from
 /// deepwiki-mcp's `UsageLog` (`Sources/deepwiki/UsageLog.swift`), which lives in its executable;
 /// this one moved into the Kit with M2, because the server is a library target.
