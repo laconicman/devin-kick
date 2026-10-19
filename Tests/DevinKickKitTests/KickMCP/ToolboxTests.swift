@@ -111,6 +111,21 @@ struct ToolboxTests {
         #expect(kept.count > 30)
     }
 
+    /// The cap holds however long the next step or the pointer to the rest is: each keeps a
+    /// quarter of it when a result is cut (Devin Review, PR #13).
+    @Test func anOversizedNextStepOrRestStillFitsTheCap() {
+        let reply = ToolReply(
+            lines: (0..<50).map { "line \($0) " + String(repeating: "x", count: 90) },
+            next: "next: " + String(repeating: "\"20261019-120000-abcd\", ", count: 400),
+            rest: String(repeating: "elsewhere ", count: 400)
+        )
+        let text = ResultCap.apply(reply)
+        #expect(text.utf8.count <= ResultCap.maximumBytes)
+        #expect(text.hasPrefix("line 0 "))
+        #expect(text.hasSuffix("…"))
+        #expect(text.contains("more lines left out at the 4 KB result cap; the rest: elsewhere"))
+    }
+
     @Test func aSingleLineOverTheCapIsCutWithin() {
         let text = ResultCap.apply(ToolReply(lines: [String(repeating: "é", count: 5000)], next: "next", rest: "elsewhere"))
         #expect(text.utf8.count <= ResultCap.maximumBytes)

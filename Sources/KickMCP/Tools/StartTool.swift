@@ -72,7 +72,8 @@ extension ToolSpec {
             session's, else KICK_MODE, else swe-2-max.
 
             At most \(startBatchLimit) sessions per call. For more, split the batch, or ask the \
-            operator and, if they agree, call again with confirmed_by_operator: true.
+            operator and, if they agree, call again with confirmed_by_operator: true; give such a \
+            batch one tag of its own, since kick_status can read every session by it.
             """,
             schema: InputSchema.object([
                 "sessions": InputSchema.array(of: InputSchema.object([
@@ -106,15 +107,19 @@ extension ToolSpec {
                     lines.append(ToolReply.failure("sessions[\(index)] (\(request.name))", error))
                 }
             }
-            let ids = started.map { "\"\($0.run.runID)\"" }.joined(separator: ", ")
             let failed = requests.count - started.count
+            // Up to the batch limit the next step names every run id; a confirmed larger batch's
+            // ids would outgrow the cap (Devin Review, PR #13), so it points at the lines instead.
+            let wait = started.count <= startBatchLimit
+                ? "call kick_wait with ids [\(started.map { "\"\($0.run.runID)\"" }.joined(separator: ", "))],"
+                : "call kick_wait with the run ids above, at most \(startBatchLimit) per call,"
             return ToolReply(
                 lines: ["started \(started.count) of \(requests.count):"] + lines,
                 next: started.isEmpty
                     ? "next: fix what each line says, then call kick_start again."
-                    : "next: call kick_wait with ids [\(ids)], and again until every session has settled."
+                    : "next: \(wait) and again until every session has settled."
                         + (failed > 0 ? " The ones that failed did not start: fix them and start them again." : ""),
-                rest: "`kick list --tag kick` lists every run",
+                rest: "kick_status with a tag every session of the batch carries (`kick list --tag kick` in a shell)",
                 isError: started.isEmpty
             )
         }

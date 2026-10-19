@@ -428,7 +428,9 @@ them; the folds are idempotent, so the index stays right, only noisier.
   `kick_final`; `kick_messages` shows first lines, the last 10 by default, each cut at 160
   characters. Every result passes one cap, 4 KB: whole lines are kept while they fit, then a note
   says how many were left out and where the rest is. The next step is repeated in every result,
-  and the cap never cuts it.
+  and the cap keeps it, cut within only past a quarter of the cap, as is the note's pointer, so
+  no result can outgrow the cap. A start above 20 sessions names its runs in the lines, not in
+  the next step.
 - **Waits stay under the client's limit.** `kick_wait` waits at most `--max-wait` (1 to 240 s,
   240 by default); a longer `timeout` is a usage error saying to call again, which teaches the
   bound where a clamp would hide it. A still-working session's line carries its latest message's

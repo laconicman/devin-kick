@@ -131,6 +131,10 @@ struct SideToolsTests {
         #expect(!confirmed.isError)
         #expect(confirmed.text.hasPrefix("started 21 of 21:"))
         #expect(await transport.count("create_session") == 21)
+        // Above the limit the next step points at the lines rather than naming every id, and the
+        // result keeps to the cap (Devin Review, PR #13).
+        #expect(confirmed.text.utf8.count <= ResultCap.maximumBytes)
+        #expect(confirmed.text.hasSuffix("next: call kick_wait with the run ids above, at most 20 per call, and again until every session has settled."))
     }
 
     /// Every session is checked before the first is started: one bad session starts nothing.
