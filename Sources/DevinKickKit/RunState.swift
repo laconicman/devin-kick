@@ -132,6 +132,9 @@ public struct RunState: Sendable, Hashable {
         apply(event)
     }
 
+    /// Folds `event` in. Every kind sets fields from the event itself, never appends or counts,
+    /// so folding one event twice changes nothing; a new kind must keep that, because a store
+    /// reads its own appends back with every other process's (``RunStore``).
     mutating func apply(_ event: IndexEvent) {
         sessionID = event.sessionID ?? sessionID
         directory = URL(fileURLWithPath: event.directory)

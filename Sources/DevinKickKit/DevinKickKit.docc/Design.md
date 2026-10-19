@@ -435,11 +435,15 @@ them; the folds are idempotent, so the index stays right, only noisier.
 - **A cancelled call gets no response.** The SDK sends none when the handler ends in
   `CancellationError`. A start's POST and its recording finish in the shield (<doc:TechDebt>
   TD-6), a cancelled batch starts nothing more, a cancelled wait stops polling, and the funnel
-  throws `CancellationError` before it renders.
+  throws `CancellationError` before it renders. Cancellation stays advisory, as the spec makes
+  it: one the SDK reads before it has registered the request, or after the answer was made, is
+  ignored, and the answer goes out (swift-sdk 0.12.1, `Server.handleRequest`; DeepWiki,
+  2026-10-19).
 - **Configuration at launch.** `serve` reads the same environment as the CLI. Without
   `DEVIN_API_KEY` it starts anyway, and every tool answers the configuration error (78), so the
   model can tell the user what to set. stdout carries only the protocol; the Kit's warnings go to
-  stderr.
+  stderr. When stdin closes, the server exits without waiting for calls in flight, as the CLI
+  does on Ctrl-C: a start recorded before its POST is found again by its run tag.
 - **The server is `devin-kick`, versioned as the package.** Its instructions say how the tools fit
   together; each description repeats what its tool needs.
 

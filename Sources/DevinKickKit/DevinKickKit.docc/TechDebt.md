@@ -173,7 +173,8 @@ rather than in kick's own transport error (69). Nothing is lost: a start is reco
 POST, and the next status call finds the session.
 
 **Discharge:** a request timeout on the server's URLSession well under the bound, or the funnel
-racing every call against `--max-wait`, as `wait` races its GETs.
+racing every call against `--max-wait`, as `wait` races its GETs. The first is the cheaper
+(DeepWiki on deepwiki-mcp, 2026-10-19, which never set one and never met the case).
 
 ## See Also
 
