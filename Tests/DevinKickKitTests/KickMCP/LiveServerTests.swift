@@ -68,7 +68,7 @@ struct LiveServerTests {
 
         _ = try await call(client, "kick_messages", ["id": .string(runID)])
         let archived = try await call(client, "kick_archive", ["ids": [.string(runID)]])
-        #expect(archived.contains("  archived  "))
+        #expect(archived.contains("  archived; reads "))
         await client.disconnect()
         await server.stop()
     }

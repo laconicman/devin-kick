@@ -363,7 +363,11 @@ struct SideToolsTests {
         let toolbox = Self.toolbox(try sandbox.kick(transport))
         let (text, isError) = try await toolbox.reply("kick_archive", ["ids": [.string(Self.idA)]])
         #expect(!isError)
-        #expect(text.hasPrefix("\(Self.idA)  archived  suspended/user_request\n"))
+        #expect(text.hasPrefix("\(Self.idA)  archived; reads suspended/user_request now\n"))
+        // Read back before it sleeps, a running session says where it is going (the dogfood).
+        await transport.script("get_session", [.json(Fixture.session(id: Self.idA, status: "running", detail: nil))])
+        let early = try await toolbox.reply("kick_archive", ["ids": [.string(Self.idA)]])
+        #expect(early.text.hasPrefix("\(Self.idA)  archived; reads running now, going to sleep\n"))
         let refused = try await toolbox.reply("kick_archive", ["ids": [.string(Self.idA)], "terminate": true])
         #expect(refused.isError)
         #expect(refused.text.contains("Unknown argument terminate"))
