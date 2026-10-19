@@ -93,4 +93,11 @@ extension DevinKick {
         }
         try await record(.replied, for: argument)
     }
+
+    /// ``reply(_:text:attach:)`` with a file's text, sent byte for byte: `kick reply --file` and
+    /// `kick_reply`'s `file`. A relative path resolves against the working directory.
+    public func reply(_ argument: String, file: String, attach: [String] = []) async throws(KickError) {
+        let text = try Self.readText(Self.resolve(file, relativeTo: nil), what: "message")
+        try await reply(argument, text: text, attach: attach)
+    }
 }

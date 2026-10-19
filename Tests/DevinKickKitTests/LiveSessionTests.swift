@@ -35,15 +35,8 @@ struct LiveSessionTests {
         )
     }
 
-    /// Ends and archives a session. `archive` reads a terminate back until `exit`, a terminate
-    /// sent early can be lost, so it is sent again if needed, and a sleeping session stays
-    /// asleep under a terminate: archived, that is as retired as it gets.
     func retire(_ sessionID: String) async {
-        for _ in 0..<3 {
-            guard let session = try? await kick.archive(sessionID, terminate: true) else { continue }
-            if session.status == "exit" || (session.status == "suspended" && session.isArchived == true) { return }
-        }
-        Issue.record("session \(sessionID) was not retired")
+        await kick.retire(sessionID)
     }
 
     func settle(_ run: StartedRun, budget: Duration = .seconds(600)) async -> Reading {
@@ -154,5 +147,18 @@ struct LiveSessionTests {
         let reconciled = try await kick.reconcile(orphan)
         #expect(reconciled.sessionID == tagged.first?.id)
         #expect(reconciled.duplicates.count == 1)
+    }
+}
+
+extension DevinKick {
+    /// Ends and archives a live test's session. `archive` reads a terminate back until `exit`, a
+    /// terminate sent early can be lost, so it is sent again if needed, and a sleeping session
+    /// stays asleep under a terminate: archived, that is as retired as it gets.
+    func retire(_ sessionID: String) async {
+        for _ in 0..<3 {
+            guard let session = try? await archive(sessionID, terminate: true) else { continue }
+            if session.status == "exit" || (session.status == "suspended" && session.isArchived == true) { return }
+        }
+        Issue.record("session \(sessionID) was not retired")
     }
 }

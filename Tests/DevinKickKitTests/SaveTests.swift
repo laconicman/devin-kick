@@ -113,6 +113,51 @@ struct SaveTests {
         #expect(index.contains(#""renamed":{"../notes.txt":"notes.txt"}"#))
     }
 
+    /// `KICK_LOG_TSV` gets one line per save, after a header when the file is new, so `kick save`,
+    /// `kick run` and `kick_save` all log; a log that can't be written only warns.
+    @Test func aSaveAppendsItsLineToTheTSVLog() async throws {
+        let directory = temporaryDirectory()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let log = directory.appending(path: "runs.tsv")
+        let transport = ScriptedTransport([
+            "get_session": [.json(Fixture.session(id: Self.sessionID, detail: "waiting_for_user", output: Self.finalOutput))],
+            "get_session_messages": [.json(#"{"items":[],"has_next_page":false}"#)],
+            "get_session_attachments": [.json("[]")],
+        ])
+        let warnings = WarningLog()
+        let kick = try DevinKick.scripted(transport, warnings: warnings, environment: ["KICK_LOG_TSV": log.path])
+        _ = try await kick.save(Self.sessionID)
+        _ = try await kick.save(Self.sessionID)
+        let lines = try String(contentsOf: log, encoding: .utf8).split(separator: "\n")
+        #expect(lines.count == 3)
+        #expect(lines.first == Substring(TSVLog.header.joined(separator: "\t")))
+        #expect(lines[1].split(separator: "\t", omittingEmptySubsequences: false).count == TSVLog.header.count)
+        #expect(lines[1].contains("\t\(Self.sessionID)\t"))
+        #expect(warnings.all.isEmpty)
+
+        let missing = directory.appending(path: "missing/runs.tsv")
+        _ = try await DevinKick.scripted(transport, warnings: warnings, environment: ["KICK_LOG_TSV": missing.path]).save(Self.sessionID)
+        #expect(warnings.all.count == 1)
+        #expect(warnings.all.first?.contains("KICK_LOG_TSV") == true)
+    }
+
+    /// Two first saves at once, which both saw no log, write one header: the log is linked into
+    /// place whole, and the second link is refused (Devin Review, PR #13).
+    @Test func twoFirstWritesToTheTSVLogLeaveOneHeader() async throws {
+        let directory = temporaryDirectory()
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        for round in 0..<20 {
+            let log = directory.appending(path: "runs-\(round).tsv")
+            try await withThrowingTaskGroup(of: Void.self) { group in
+                for _ in 0..<2 { group.addTask { try TSVLog.create(log) } }
+                try await group.waitForAll()
+            }
+            #expect(try String(contentsOf: log, encoding: .utf8) == TSVLog.header.joined(separator: "\t") + "\n")
+        }
+        let drafts = try FileManager.default.contentsOfDirectory(atPath: directory.path).filter { $0.hasPrefix(".") }
+        #expect(drafts.isEmpty)
+    }
+
     /// A save without output removes an earlier result.json rather than leaving it to read as
     /// the current result (PR #11 review, r4308714874).
     @Test func aSaveWithoutOutputRemovesTheStaleResult() async throws {

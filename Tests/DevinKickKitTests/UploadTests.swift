@@ -77,6 +77,34 @@ struct UploadTests {
         #expect(text.contains("hello"))
     }
 
+    /// Two parallel uploads of one file make one upload: the second awaits the first's URL. A
+    /// lookup → upload → record spans a suspension, which a long-lived server would otherwise race.
+    @Test func parallelUploadsOfOneFileUploadItOnce() async throws {
+        let sandbox = try Sandbox()
+        let transport = ScriptedTransport(["upload_attachment": [.delayed(.milliseconds(200), .json(Self.uploaded))]])
+        let kick = try DevinKick.scripted(transport, environment: ["KICK_UPLOAD_ROOTS": sandbox.root.path])
+        async let first = kick.upload(["notes.txt"], relativeTo: sandbox.root)
+        async let second = kick.upload(["notes.txt"], relativeTo: sandbox.root)
+        let uploads = try await first + second
+        #expect(await transport.count("upload_attachment") == 1)
+        #expect(Set(uploads.map(\.url)).count == 1)
+        #expect(uploads.count(where: \.cached) == 1)
+    }
+
+    /// An upload another process recorded after this one's first lookup is a cache hit.
+    @Test func anotherProcesssUploadIsACacheHit() async throws {
+        let sandbox = try Sandbox()
+        try Data("other".utf8).write(to: sandbox.root.appending(path: "other.txt"))
+        let transport = ScriptedTransport(["upload_attachment": [.json(Self.uploaded)]])
+        let environment = ["KICK_UPLOAD_ROOTS": sandbox.root.path, "KICK_STORE": sandbox.base.appending(path: "store").path]
+        let first = try DevinKick.scripted(transport, environment: environment)
+        let second = try DevinKick.scripted(transport, environment: environment)
+        #expect(try await first.upload(["other.txt"], relativeTo: sandbox.root).map(\.cached) == [false])
+        #expect(try await second.upload(["notes.txt"], relativeTo: sandbox.root).map(\.cached) == [false])
+        #expect(try await first.upload(["notes.txt"], relativeTo: sandbox.root).map(\.cached) == [true])
+        #expect(await transport.count("upload_attachment") == 2)
+    }
+
     /// Every path in a manifest resolves alike: `~` first, then relative to its directory
     /// (from the 2026-10-18 diff review through kick: `attach` didn't expand `~`).
     @Test func tildeExpandsBeforeTheManifestDirectoryApplies() throws {

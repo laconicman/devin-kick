@@ -86,19 +86,3 @@ struct StartCommand: AsyncParsableCommand {
         }
     }
 }
-
-extension SessionRequest {
-    /// How a failure names the request: its title, or its prompt file.
-    var name: String { title ?? promptFile.lastPathComponent }
-}
-
-extension StartedRun {
-    /// `run id  session id  URL  directory`, and any duplicate found under the run's tag.
-    var line: String {
-        var line = "\(run.runID)  \(sessionID)  \(url)  \(run.directory.path)"
-        if !run.duplicates.isEmpty {
-            line += "\n  also under this run's tag: \(run.duplicates.joined(separator: ", "))"
-        }
-        return line
-    }
-}

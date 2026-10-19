@@ -27,12 +27,25 @@ public struct StartOptions: Sendable, Hashable {
     }
 }
 
+/// Where a session's first message comes from.
+public enum PromptSource: Sendable, Hashable {
+    /// A file whose text is sent byte for byte: `kick start --prompt`, a manifest entry,
+    /// `kick_start`'s `prompt_file`.
+    case file(String)
+    /// The text itself: `kick_start`'s `prompt`. ``DevinKick/start(_:)`` writes it into the run
+    /// directory as `prompt.md` before `request.json`, which names it, so the run is recorded as
+    /// one from a file is, and the file is byte-identical to the first message.
+    case text(String)
+}
+
 /// One session to start, validated: its prompt read, its schema augmented, its attachments
 /// resolved inside `KICK_UPLOAD_ROOTS`, its mode resolved.
 public struct SessionRequest: Sendable, Hashable {
-    /// The prompt file's text, sent as is: the session's first message is byte-identical.
+    /// The prompt's text, sent as is: the session's first message is byte-identical.
     public var prompt: String
-    public var promptFile: URL
+    /// The file the prompt came from; `nil` for inline text, which ``DevinKick/start(_:)``
+    /// writes into the run directory as `prompt.md`.
+    public var promptFile: URL?
     public var title: String?
     /// The schema as sent, with `kick_final` (``Schema/augmented(_:)``).
     public var schema: Data
@@ -46,11 +59,25 @@ public struct SessionRequest: Sendable, Hashable {
     public var outDirectory: URL?
 }
 
+extension SessionRequest {
+    /// How a failure names the request: its title, or its prompt file.
+    public var name: String { title ?? promptFile?.lastPathComponent ?? "an inline prompt" }
+}
+
 /// A session kick started and recorded.
 public struct StartedRun: Sendable, Hashable {
     public var run: RunState
     public var sessionID: String
     public var url: String
+
+    /// `run id  session id  URL  directory`, and any duplicate found under the run's tag.
+    public var line: String {
+        var line = "\(run.runID)  \(sessionID)  \(url)  \(run.directory.path)"
+        if !run.duplicates.isEmpty {
+            line += "\n  also under this run's tag: \(run.duplicates.joined(separator: ", "))"
+        }
+        return line
+    }
 }
 
 extension DevinKick {
@@ -61,9 +88,19 @@ extension DevinKick {
     public func prepare(
         promptFile: String, title: String?, schemaFile: String?, attach: [String], options: StartOptions
     ) throws(KickError) -> SessionRequest {
+        try prepare(.file(promptFile), title: title, schemaFile: schemaFile, attach: attach, mode: nil, tags: [], options: options)
+    }
+
+    /// Validates one session of a batch, from a file or inline text, with its own mode and tags
+    /// as a manifest entry has them (the MCP server's `kick_start`). Relative paths resolve
+    /// against the working directory.
+    public func prepare(
+        _ prompt: PromptSource, title: String?, schemaFile: String?, attach: [String], mode: DevinMode?, tags: [String],
+        options: StartOptions
+    ) throws(KickError) -> SessionRequest {
         try prepare(
-            promptFile: promptFile, title: title, schemaFile: schemaFile, attach: attach, entryMode: nil,
-            entryTags: [], options: options, relativeTo: nil
+            prompt, title: title, schemaFile: schemaFile, attach: attach, entryMode: mode, entryTags: tags,
+            options: options, relativeTo: nil
         )
     }
 
@@ -75,7 +112,7 @@ extension DevinKick {
             do {
                 let mode = try entry.mode.map { mode throws(KickError) in try DevinMode(mode) }
                 requests.append(try prepare(
-                    promptFile: entry.promptFile, title: entry.title, schemaFile: entry.schemaFile,
+                    .file(entry.promptFile), title: entry.title, schemaFile: entry.schemaFile,
                     attach: entry.attach ?? [], entryMode: mode, entryTags: entry.tags ?? [],
                     options: options, relativeTo: manifest.directory
                 ))
@@ -87,12 +124,22 @@ extension DevinKick {
     }
 
     func prepare(
-        promptFile: String, title: String?, schemaFile: String?, attach: [String], entryMode: DevinMode?,
+        _ source: PromptSource, title: String?, schemaFile: String?, attach: [String], entryMode: DevinMode?,
         entryTags: [String], options: StartOptions, relativeTo base: URL?
     ) throws(KickError) -> SessionRequest {
-        let promptURL = Self.resolve(promptFile, relativeTo: base)
-        let prompt = try Self.readText(promptURL, what: "prompt")
-        guard !prompt.isEmpty else { throw .usage("The prompt file \(promptURL.path) is empty.") }
+        let prompt: String
+        let promptURL: URL?
+        switch source {
+        case .file(let path):
+            let url = Self.resolve(path, relativeTo: base)
+            prompt = try Self.readText(url, what: "prompt")
+            guard !prompt.isEmpty else { throw .usage("The prompt file \(url.path) is empty.") }
+            promptURL = url
+        case .text(let text):
+            guard !text.isEmpty else { throw .usage("The prompt is empty.") }
+            prompt = text
+            promptURL = nil
+        }
         let schemaURL = schemaFile.map { Self.resolve($0, relativeTo: base) }
         let schema = try Schema.augmented(try schemaURL.map { url throws(KickError) in try Self.readData(url, what: "schema") })
         return SessionRequest(
@@ -139,8 +186,9 @@ extension DevinKick {
     }
 
     /// Starts one session, recorded at submit (Design: "Never lost; duplicates found, not
-    /// prevented"). The order is pinned: upload the attachments, mint the run id, write
-    /// `request.json`, append `requested`, POST, write `session.json`, append `created`.
+    /// prevented"). The order is pinned: upload the attachments, mint the run id, write an
+    /// inline prompt as `prompt.md`, write `request.json`, append `requested`, POST, write
+    /// `session.json`, append `created`.
     ///
     /// A run with `requested` and no `created` is an orphan, found again by its run tag. Ctrl-C
     /// kills the process, so the record written before the POST is what makes "never lost"
@@ -154,13 +202,19 @@ extension DevinKick {
             attachmentURLs.append(try await upload(resolved: file).url)
         }
         let runID = await store.newRunID()
-        let directory = try await store.makeRunDirectory(
-            runID: runID, title: request.title ?? request.promptFile.deletingPathExtension().lastPathComponent,
-            parent: request.outDirectory
-        )
+        // Untitled, a run directory is named after its prompt file, or an inline prompt's first line.
+        let name = request.title ?? request.promptFile?.deletingPathExtension().lastPathComponent
+            ?? request.prompt.split(whereSeparator: \.isNewline).first.map(String.init)
+        let directory = try await store.makeRunDirectory(runID: runID, title: name, parent: request.outDirectory)
+        let promptFile: URL
+        if let file = request.promptFile {
+            promptFile = file
+        } else {
+            promptFile = try await store.writePrompt(request.prompt, in: directory)
+        }
         let tags = Self.tags(request.tags, runID: runID)
         let body = try Self.createBody(request, attachmentURLs: attachmentURLs, tags: tags)
-        try await store.writeRequest(try Self.requestRecord(body, request), in: directory)
+        try await store.writeRequest(try Self.requestRecord(body, request, promptFile: promptFile), in: directory)
         let run = RunState(
             runID: runID, directory: directory, mode: request.mode.rawValue, title: request.title, tags: tags,
             resumable: request.resumable
@@ -283,7 +337,8 @@ extension DevinKick {
         )
     }
 
-    /// `request.json`: the body as sent, and the files it came from.
+    /// `request.json`: the body as sent, and the files it came from; an inline prompt's file is
+    /// its `prompt.md`.
     struct RequestRecord: Encodable {
         var body: Components.Schemas.SessionCreateRequest
         var promptFile: String
@@ -297,9 +352,11 @@ extension DevinKick {
         }
     }
 
-    static func requestRecord(_ body: Components.Schemas.SessionCreateRequest, _ request: SessionRequest) throws(KickError) -> Data {
+    static func requestRecord(
+        _ body: Components.Schemas.SessionCreateRequest, _ request: SessionRequest, promptFile: URL
+    ) throws(KickError) -> Data {
         let record = RequestRecord(
-            body: body, promptFile: request.promptFile.path, schemaFile: request.schemaFile?.path,
+            body: body, promptFile: promptFile.path, schemaFile: request.schemaFile?.path,
             attach: request.attachments.map(\.path)
         )
         do {

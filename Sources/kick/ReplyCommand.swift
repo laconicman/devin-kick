@@ -33,16 +33,11 @@ struct ReplyCommand: AsyncParsableCommand {
     func run() async throws {
         try await reportingKickErrors { () async throws(KickError) in
             let kick = try DevinKick.fromEnvironment()
-            let message: String
             if let file {
-                guard let data = FileManager.default.contents(atPath: file), let text = String(data: data, encoding: .utf8) else {
-                    throw .usage("Couldn't read \(file) as UTF-8 text.")
-                }
-                message = text
+                try await kick.reply(id, file: file, attach: attach)
             } else {
-                message = text ?? ""
+                try await kick.reply(id, text: text ?? "", attach: attach)
             }
-            try await kick.reply(id, text: message, attach: attach)
             emit("posted to \(try await kick.sessionID(of: id))")
         }
     }

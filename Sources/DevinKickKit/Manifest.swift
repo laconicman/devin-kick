@@ -51,8 +51,9 @@ public struct Manifest: Sendable, Hashable {
         return Manifest(entries: entries, directory: file.deletingLastPathComponent())
     }
 
-    /// A decoding error as a path and a cause, such as `[2].prompt_file is missing`.
-    static func describe(_ error: DecodingError) -> String {
+    /// A decoding error as a path and a cause, such as `[2].prompt_file is missing`; the MCP
+    /// server names a tool's bad argument the same way.
+    public static func describe(_ error: DecodingError) -> String {
         func path(_ codingPath: [any CodingKey]) -> String {
             let text = codingPath.map { key in key.intValue.map { "[\($0)]" } ?? ".\(key.stringValue)" }.joined()
             return text.hasPrefix(".") ? String(text.dropFirst()) : (text.isEmpty ? "the root" : text)

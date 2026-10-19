@@ -140,6 +140,60 @@ lists the modes (`LiveSmoke`). The feedback for Cognition is still drafted in
 `Upstream/devin-closed-automation-schemas.md`, unsent: a schema they close later would be opened
 on the next re-vendor anyway.
 
+### TD-9 — swift-sdk reads a data-URL string argument as bytes — *open (upstream)*
+
+Tracked in [#14](https://github.com/laconicman/devin-kick/issues/14); upstream in
+modelcontextprotocol/swift-sdk#277 (open), with fixes proposed in #278 and #295, both open.
+
+swift-sdk 0.12.1's `Value.init(from:)` decodes any JSON string that is a whole data URL
+(`data:`, anything, a comma, anything) into `Value.data`, and re-encodes it as
+`data:<type>;base64,…`. A tool's handler never sees the raw JSON, so a prompt beginning
+`data: here is the task, …` would reach Devin rewritten. The server refuses such an argument
+with a usage error that asks for a file instead (`ToolInput.check`), and a test shows the SDK
+doing it.
+
+**Cost:** an inline prompt, a reply's text, a title or a tag that begins `data:` and holds a comma
+has to come from a file.
+
+**Discharge:** raise the SDK floor to the release that ships #278 or #295. The test that shows the
+SDK's behaviour then fails, and the refusal goes with it.
+
+### TD-10 — only kick_wait races its requests — *open*
+
+Tracked in [#15](https://github.com/laconicman/devin-kick/issues/15).
+
+A call stays short only while Devin answers (<doc:Design>, "Short calls and handles"). `wait`
+races each GET against its budget; every other call sends its requests as the CLI does, each
+bounded by URLSession's request timeout (60 s on `URLSession.shared`, measured) and retried up to
+four times when idempotent. A GET that never answers takes five timeouts and about 15 s of
+backoff, roughly 315 s, past Claude Code's 300 s idle abort.
+
+**Cost:** when Devin hangs, a tool call other than `kick_wait` can end in the client's timeout
+rather than in kick's own transport error (69). Nothing is lost: a start is recorded before its
+POST, and the next status call finds the session.
+
+**Discharge:** a request timeout on the server's URLSession well under the bound, or the funnel
+racing every call against `--max-wait`, as `wait` races its GETs. The first is the cheaper
+(DeepWiki on deepwiki-mcp, 2026-10-19, which never set one and never met the case).
+
+### TD-11 — a batch above 64 sessions must be split — *open (a questionable enhancement)*
+
+Tracked in [#16](https://github.com/laconicman/devin-kick/issues/16).
+
+One `kick_start` call starts at most 20 sessions, or 64 with the operator's confirmation (owner,
+2026-10-19). Every run id of a batch then fits its next step, which the 4 KB result cap keeps, so
+no run loses its handle when the cap cuts the result's lines. Devin Review on PR #13 found that an
+unbounded confirmed batch did lose them: past about 15 start lines, the side tools had no way to
+name the rest (<doc:Design>, "kick serve: the side profile").
+
+**Cost:** a model splits a batch above 64 sessions into several calls, and waits on and saves
+each call's runs separately.
+
+**Discharge** (a questionable enhancement, owner 2026-10-19): every `kick_start` call tags its
+sessions with a batch tag (`kick-batch-<id>`) named in the next step, and `kick_wait` and
+`kick_save` take a tag beside ids. Larger batches would then stay workable. Whether batches that
+large are worth the added surface is open.
+
 ## See Also
 
 - <doc:Design>

@@ -15,7 +15,8 @@ public struct Upload: Sendable, Hashable {
     public var file: URL
     /// The URL to pass as an attachment.
     public var url: String
-    /// Whether the URL came from the cache, with nothing uploaded.
+    /// Whether nothing was uploaded for this call: the URL came from the cache, or from an
+    /// upload of the same content already in flight.
     public var cached: Bool
 }
 
@@ -64,6 +65,10 @@ struct UploadRoots: Sendable {
 }
 
 /// The upload cache, `uploads.jsonl` in the run store: one line per upload.
+///
+/// A lookup first folds in what other processes appended (``TailReader``), and an upload in
+/// flight is shared: a lookup → upload → record spans a suspension, so without it two parallel
+/// calls for one file, which a long-lived MCP server makes, would both upload it, permanently.
 actor UploadCache {
     /// One upload. The URL is the organization's, on that server: the scope is part of the key,
     /// so changing `DEVIN_ORG_ID` or `KICK_SERVER_URL` over one store uploads again rather than
@@ -96,30 +101,59 @@ actor UploadCache {
 
     let url: URL
     private let warn: RunStore.Warn
-    private var entries: [String: Entry]?
+    private var entries: [String: Entry] = [:]
+    /// `uploads.jsonl` as read so far.
+    private var log: TailReader
+    /// The uploads in flight, by key.
+    private var inFlight: [String: Task<Result<Entry, KickError>, Never>] = [:]
 
     init(url: URL, warn: @escaping RunStore.Warn) {
         self.url = url
         self.warn = warn
+        self.log = TailReader(url: url)
     }
 
-    func lookup(sha256: String, name: String, org: String, server: String) -> Entry? {
-        if entries == nil {
-            entries = [:]
-            let lines = (try? Data(contentsOf: url))?.split(separator: UInt8(ascii: "\n")) ?? []
-            for line in lines {
-                if let entry = try? RunStore.decoder.decode(Entry.self, from: line), let key = entry.key {
-                    entries?[key] = entry
-                }
+    /// The upload of `key`'s content: from the cache, from an upload of it already in flight, or
+    /// from `upload`, which is recorded. `uploaded` is true only for the call that sent it.
+    ///
+    /// `upload` runs in an unstructured task, so a cancelled caller neither cancels a permanent
+    /// upload nor leaves it unrecorded, and a second caller awaits the same task.
+    func entry(
+        for key: String, upload: @escaping @concurrent @Sendable () async throws(KickError) -> Entry
+    ) async throws(KickError) -> (entry: Entry, uploaded: Bool) {
+        if let entry = cached(key) { return (entry, false) }
+        if let pending = inFlight[key] { return (try await pending.value.get(), false) }
+        let task = Task { () async -> Result<Entry, KickError> in
+            do throws(KickError) {
+                return .success(try await upload())
+            } catch {
+                return .failure(error)
             }
         }
-        return entries?[Entry.key(sha256: sha256, name: name, org: org, server: server)]
+        inFlight[key] = task
+        let result = await task.value
+        inFlight[key] = nil
+        let entry = try result.get()
+        record(entry)
+        return (entry, true)
+    }
+
+    /// The cached upload of `key`, after folding in the lines appended since the last lookup.
+    func cached(_ key: String) -> Entry? {
+        let (lines, restarted) = log.read()
+        if restarted { entries = [:] }
+        for line in lines {
+            if let entry = try? RunStore.decoder.decode(Entry.self, from: line), let key = entry.key {
+                entries[key] = entry
+            }
+        }
+        return entries[key]
     }
 
     /// Records an upload. A failure only warns: the file is uploaded either way, and a lost
     /// entry costs a second upload of the same content later.
     func record(_ entry: Entry) {
-        if let key = entry.key { entries?[key] = entry }
+        if let key = entry.key { entries[key] = entry }
         do {
             try RunStore.createPrivateDirectory(url.deletingLastPathComponent())
             try RunStore.appendLine(try RunStore.encoder.encode(entry), to: url)
@@ -186,21 +220,21 @@ extension DevinKick {
         let sha256 = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
         let orgID = try configuration.requireOrgID()
         let server = configuration.serverURL.absoluteString
-        if let entry = await uploads.lookup(sha256: sha256, name: name, org: orgID, server: server) {
-            return Upload(file: file, url: entry.url, cached: true)
+        let key = UploadCache.Entry.key(sha256: sha256, name: name, org: orgID, server: server)
+        let (entry, uploaded) = try await uploads.entry(for: key) { () async throws(KickError) -> UploadCache.Entry in
+            // A part over in-memory `Data`, in an array: both re-iterable (`.multiple`), so a 429
+            // can be retried by `RetryMiddleware`.
+            let response = try await call(Operations.UploadAttachment.id) {
+                try await client.uploadAttachment(
+                    path: .init(orgId: orgID),
+                    body: .multipartForm([.file(.init(payload: .init(body: HTTPBody(data)), filename: name))])
+                ).ok.body.json
+            }
+            return .init(
+                sha256: sha256, name: name, url: response.url, attachmentID: response.attachmentId,
+                org: orgID, server: server, timestamp: Date()
+            )
         }
-        // A part over in-memory `Data`, in an array: both re-iterable (`.multiple`), so a 429 can
-        // be retried by `RetryMiddleware`.
-        let response = try await call(Operations.UploadAttachment.id) {
-            try await client.uploadAttachment(
-                path: .init(orgId: orgID),
-                body: .multipartForm([.file(.init(payload: .init(body: HTTPBody(data)), filename: name))])
-            ).ok.body.json
-        }
-        await uploads.record(.init(
-            sha256: sha256, name: name, url: response.url, attachmentID: response.attachmentId,
-            org: orgID, server: server, timestamp: Date()
-        ))
-        return Upload(file: file, url: response.url, cached: false)
+        return Upload(file: file, url: entry.url, cached: !uploaded)
     }
 }

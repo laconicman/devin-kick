@@ -16,6 +16,8 @@ public struct Configuration: Sendable {
     public var uploadRoots: [String]?
     /// `KICK_MODE`: the mode for a session no flag or manifest entry names.
     public var defaultMode: DevinMode?
+    /// `KICK_LOG_TSV`: the file each settled run's line goes to, if any (`TSVLog`).
+    public var logTSV: URL?
 
     public static let defaultServerURL = URL(string: "https://api.devin.ai")!
 
@@ -26,7 +28,7 @@ public struct Configuration: Sendable {
 
     public init(
         apiKey: String, orgID: String?, serverURL: URL = defaultServerURL, storeURL: URL = defaultStoreURL,
-        uploadRoots: [String]? = nil, defaultMode: DevinMode? = nil
+        uploadRoots: [String]? = nil, defaultMode: DevinMode? = nil, logTSV: URL? = nil
     ) {
         self.apiKey = apiKey
         self.orgID = orgID
@@ -34,10 +36,11 @@ public struct Configuration: Sendable {
         self.storeURL = storeURL
         self.uploadRoots = uploadRoots
         self.defaultMode = defaultMode
+        self.logTSV = logTSV
     }
 
     /// Reads `DEVIN_API_KEY`, and optionally `DEVIN_ORG_ID`, `KICK_SERVER_URL`, `KICK_STORE`,
-    /// `KICK_UPLOAD_ROOTS` and `KICK_MODE`.
+    /// `KICK_UPLOAD_ROOTS`, `KICK_MODE` and `KICK_LOG_TSV`.
     public static func fromEnvironment(
         _ environment: [String: String] = ProcessInfo.processInfo.environment
     ) throws(KickError) -> Configuration {
@@ -66,9 +69,12 @@ public struct Configuration: Sendable {
                 throw .config("KICK_MODE: \(error.localizedDescription)")
             }
         }
+        let logTSV = environment["KICK_LOG_TSV"].flatMap {
+            $0.isEmpty ? nil : URL(fileURLWithPath: NSString(string: $0).expandingTildeInPath)
+        }
         return Configuration(
             apiKey: apiKey, orgID: orgID, serverURL: serverURL, storeURL: storeURL,
-            uploadRoots: uploadRoots, defaultMode: defaultMode
+            uploadRoots: uploadRoots, defaultMode: defaultMode, logTSV: logTSV
         )
     }
 

@@ -1,6 +1,6 @@
 # devin-kick — Devin as a side kick or a main kick
 
-One binary, `kick`: CLI subcommands, and from M2 `kick serve`, an MCP stdio server. Both wrap
+One binary, `kick`: CLI subcommands, and `kick serve`, an MCP stdio server (M2). Both wrap
 `DevinKickKit` over Devin's **official** v3 REST API. **Side kick:** a capable model delegates
 bounded jobs and verifies the results itself. **Main kick:** a smaller model hands Devin the
 whole task and only relays.
@@ -15,9 +15,10 @@ wins.
 ## Architecture
 
 `DevinOpenAPI` (generated from the vendored, normalized spec; nothing generated committed) →
-`DevinKickKit` (façade) → `kick` (argument parsing, and from M2 the MCP server). Maintainer tool:
-`devin-spec-tool`. Swift 6.4 tools version, Swift 6 language mode, macOS 15 floor, with the Swift 7
-upcoming features on every handwritten target. Each choice is reasoned in `Design`.
+`DevinKickKit` (façade) → `KickMCP` (the MCP server's tools, dispatch and cap) → `kick` (argument
+parsing). Maintainer tool: `devin-spec-tool`. Swift 6.4 tools version, Swift 6 language mode,
+macOS 15 floor, with the Swift 7 upcoming features on every handwritten target. Each choice is
+reasoned in `Design`.
 
 ## Rules specific to this repository
 

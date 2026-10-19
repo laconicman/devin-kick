@@ -207,6 +207,49 @@ struct StatusTests {
         #expect(readings.map(\.outcome.label) == ["error", "done"])
     }
 
+    /// A cancelled wait stops polling, as the MCP server's cancelled `kick_wait` needs. Its sleeps
+    /// swallow the cancellation, so it used to poll on, each GET failing at once, until three
+    /// failures in a row ended it with a result nobody would read.
+    @Test(.timeLimit(.minutes(1)))
+    func aCancelledWaitStopsPolling() async throws {
+        let transport = ScriptedTransport(["get_session": [.delayed(.milliseconds(200), .json(Fixture.session(id: Self.idA)))]])
+        let kick = try Self.kick(transport)
+        let waiting = Task { try await kick.wait([Self.idA]) }
+        while await transport.count("get_session") == 0 { try await Task.sleep(for: .milliseconds(5)) }
+        waiting.cancel()
+        _ = try await waiting.value
+        #expect(await transport.count("get_session") == 1)
+    }
+
+    /// `status` reads the named sessions, then the tag's; a tag no session carries is a usage
+    /// error only when nothing else was named.
+    @Test func statusReadsTheIdsThenTheTag() async throws {
+        let transport = ScriptedTransport([
+            "get_session": [.json(Fixture.session(id: Self.idA))],
+            "get_sessions": [.json(Fixture.page([]))],
+        ])
+        let kick = try Self.kick(transport)
+        #expect(try await kick.status([Self.idA], tag: "none").map(\.argument) == [Self.idA])
+        await #expect(throws: KickError.usage("No session carries the tag none.")) { try await kick.status([], tag: "none") }
+        await transport.script("get_sessions", [.json(Fixture.page([Fixture.session(id: Self.idB, tags: ["t"])]))])
+        #expect(try await kick.status([Self.idA], tag: "t").map { $0.session?.id } == [Self.idA, Self.idB])
+        // A session named and tagged is read once (swe-2-max review, 2026-10-19).
+        await transport.script("get_sessions", [.json(Fixture.page([
+            Fixture.session(id: Self.idA, tags: ["t"]), Fixture.session(id: Self.idB, tags: ["t"]),
+        ]))])
+        #expect(try await kick.status([Self.idA], tag: "t").map { $0.session?.id } == [Self.idA, Self.idB])
+        // A named session that couldn't be read takes the listing's reading, keeping its own
+        // argument (Devin Review, PR #13).
+        await transport.script("get_session", [.response(status: 404, body: Fixture.problem(status: 404, detail: "gone"))])
+        await transport.script("get_sessions", [.json(Fixture.page([
+            Fixture.session(id: Self.idA, detail: "waiting_for_user", output: Self.finalOutput, tags: ["t"]),
+        ]))])
+        let healed = try await kick.status([Self.idA], tag: "t")
+        #expect(healed.map(\.argument) == [Self.idA])
+        #expect(healed.map(\.outcome.label) == ["done"])
+        #expect(Reading.exitCode(healed) == 0)
+    }
+
     @Test(arguments: [Duration.zero, .seconds(241)])
     func aWaitOutsideItsBoundIsAUsageError(_ timeout: Duration) async throws {
         await #expect(throws: KickError.self) { try await Self.kick(ScriptedTransport([:])).wait(["x"], timeout: timeout) }

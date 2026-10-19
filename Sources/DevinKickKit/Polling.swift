@@ -39,7 +39,8 @@ extension DevinKick {
     /// Each GET is raced against the remaining budget, so one hung request can't break the
     /// bound; deepwiki-mcp checked its deadline only between polls. A 429, a 5xx or no answer
     /// inside a wait is transient: the session is polled again, up to three polls in a row,
-    /// after which its error stands.
+    /// after which its error stands. A cancelled task stops polling and returns what it has
+    /// read; the MCP server then answers nothing (plan decision 9).
     public func wait(_ arguments: [String], until condition: WaitCondition = .all, timeout: Duration = maximumWait) async throws(KickError) -> [Reading] {
         guard timeout > .zero, timeout <= Self.maximumWait else {
             throw .usage("A wait lasts between 1 and \(Self.maximumWait.components.seconds) seconds; call it again to wait longer.")
@@ -72,12 +73,13 @@ extension DevinKick {
             record(reading, at: index)
         }
         var poll = 1
-        while !Self.satisfied(condition, readings.indices.map(done)) {
+        // The sleeps swallow a cancellation, so the loop checks for one itself.
+        while !Self.satisfied(condition, readings.indices.map(done)), !Task.isCancelled {
             let remaining = deadline - timing.now()
             guard remaining > .zero else { break }
             try? await timing.sleep(min(timing.polling.interval(before: poll), remaining))
             poll += 1
-            guard deadline - timing.now() > .zero else { break }
+            guard deadline - timing.now() > .zero, !Task.isCancelled else { break }
             let pending = readings.indices.filter { !done($0) }
             for (index, reading) in await observe(arguments, at: pending, until: deadline) {
                 if reading.outcome.label != readings[index].outcome.label { progress?(reading) }

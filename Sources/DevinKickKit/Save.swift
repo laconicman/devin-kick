@@ -10,8 +10,9 @@ public struct SavedRun: Sendable, Equatable {
 
 extension DevinKick {
     /// Saves where `argument` stands into its run directory: `session.json`, `result.json` (the
-    /// structured output), `messages.json` and `attachments/`, then a `settled` event. A session
-    /// kick didn't record gets a run of its own. A deleted run directory is recreated.
+    /// structured output), `messages.json` and `attachments/`, then a `settled` event, and the
+    /// `KICK_LOG_TSV` line (``TSVLog``). A session kick didn't record gets a run of its own. A
+    /// deleted run directory is recreated.
     ///
     /// The files are derived, so one that can't be written or fetched only warns; the session's
     /// own read and the index event throw.
@@ -68,7 +69,15 @@ extension DevinKick {
         if !renamed.isEmpty { event.renamed = renamed }
         try await store.append(event)
         run.apply(event)
-        return SavedRun(run: run, reading: reading, files: files)
+        let saved = SavedRun(run: run, reading: reading, files: files)
+        if let log = configuration.logTSV {
+            do {
+                try TSVLog.append(saved, to: log)
+            } catch {
+                warn("couldn't append to KICK_LOG_TSV \(log.path) (\(error.localizedDescription)); the run is saved.")
+            }
+        }
+        return saved
     }
 
     /// Records a session kick didn't create as a run of its own, so it can be saved.
