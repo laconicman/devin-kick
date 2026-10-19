@@ -140,6 +140,41 @@ lists the modes (`LiveSmoke`). The feedback for Cognition is still drafted in
 `Upstream/devin-closed-automation-schemas.md`, unsent: a schema they close later would be opened
 on the next re-vendor anyway.
 
+### TD-9 — swift-sdk reads a data-URL string argument as bytes — *open (upstream)*
+
+Tracked upstream in modelcontextprotocol/swift-sdk#277 (open); fixes are proposed in #278 and
+#295, both open.
+
+swift-sdk 0.12.1's `Value.init(from:)` decodes any JSON string that is a whole data URL
+(`data:`, anything, a comma, anything) into `Value.data`, and re-encodes it as
+`data:<type>;base64,…`. A tool's handler never sees the raw JSON, so a prompt beginning
+`data: here is the task, …` would reach Devin rewritten. The server refuses such an argument
+with a usage error that asks for a file instead (`ToolInput.check`), and a test shows the SDK
+doing it.
+
+**Cost:** an inline prompt, a reply's text, a title or a tag that begins `data:` and holds a comma
+has to come from a file.
+
+**Discharge:** raise the SDK floor to the release that ships #278 or #295. The test that shows the
+SDK's behaviour then fails, and the refusal goes with it.
+
+### TD-10 — only kick_wait races its requests — *open*
+
+Not tracked by an issue yet.
+
+A call stays short only while Devin answers (<doc:Design>, "Short calls and handles"). `wait`
+races each GET against its budget; every other call sends its requests as the CLI does, each
+bounded by URLSession's request timeout (60 s on `URLSession.shared`, measured) and retried up to
+four times when idempotent. A GET that never answers takes five timeouts and about 15 s of
+backoff, roughly 315 s, past Claude Code's 300 s idle abort.
+
+**Cost:** when Devin hangs, a tool call other than `kick_wait` can end in the client's timeout
+rather than in kick's own transport error (69). Nothing is lost: a start is recorded before its
+POST, and the next status call finds the session.
+
+**Discharge:** a request timeout on the server's URLSession well under the bound, or the funnel
+racing every call against `--max-wait`, as `wait` races its GETs.
+
 ## See Also
 
 - <doc:Design>

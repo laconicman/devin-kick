@@ -9,7 +9,7 @@ import OpenAPIURLSession
 /// Its public surface uses the Kit's own types, never the generated ones, so the generated
 /// target stays an implementation detail (`InternalImportsByDefault` enforces this).
 public struct DevinKick: Sendable {
-    public static let version = "0.2.0"
+    public static let version = "0.3.0"
 
     let client: Client
     let configuration: Configuration

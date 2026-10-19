@@ -10,4 +10,6 @@ where. The local workaround for each is described in the DocC TechDebt article.
 | [`devin-closed-automation-schemas.md`](devin-closed-automation-schemas.md) | Cognition (API document) | not sent; observed live 2026-10-18; worked around by `devin-spec-tool`'s transform 4 |
 
 Already tracked upstream, so no draft: the `UnusedImportAccess` warnings in generated sources,
-apple/swift-openapi-generator#946 (fix pending in PR #947).
+apple/swift-openapi-generator#946 (fix pending in PR #947); swift-sdk reading a data-URL string
+argument as bytes, modelcontextprotocol/swift-sdk#277 (fixes pending in PRs #278 and #295;
+TechDebt TD-9).

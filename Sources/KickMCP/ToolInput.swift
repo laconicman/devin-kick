@@ -35,6 +35,7 @@ enum ToolInput {
     static func check(_ value: Value, against schema: Value?, at path: String) throws(KickError) {
         switch value {
         case .data:
+            // TODO(TD-9): goes once the SDK keeps such a string a string (swift-sdk#277).
             throw .usage("\(path) reads as a data: URL, which this server's MCP library turns into bytes, so it can't pass the text on as written. Put the text in a file and pass the file's path instead.")
         case .object(let fields):
             guard let properties = schema?.objectValue?["properties"]?.objectValue else { return }

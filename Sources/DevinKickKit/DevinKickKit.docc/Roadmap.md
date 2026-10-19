@@ -20,18 +20,23 @@ owner splits one. The why is in <doc:Design>.
   - TD-4 discharged: kick's `kick_final` field and the output verdict.
   - A live suite that answers the plan's open questions (<doc:Design>, "Reply, archive,
     terminate: what the server does").
+- **M2 — the side profile (0.3.0).** `kick serve --profile side` with 8 tools, compact replies,
+  and no result ever inlined (<doc:Design>, "kick serve: the side profile").
+  - `KickMCP`, a library target over the Kit: `ToolSpec`, one dispatch boundary, one `isError`
+    funnel carrying the CLI's exit statuses, and a 4 KB cap on every result.
+  - The run store and the upload cache read what other processes append, and parallel uploads
+    of one content make one upload.
+  - Inline prompts recorded as `prompt.md`; a batch capped at 20 sessions without the
+    operator's confirmation; terminate, bypass, the ACU limit and the store left to a person.
+  - Live through the tools (`LiveServer`), and a 2–3 session batch run headless from Claude Code.
 
 ### Now
 
-- **M2 — the side profile:** `kick serve --profile side` with 8 tools, compact replies, and no
-  result ever inlined. The Kit's readings, status line and exit rank are reused as they are. The
-  server is long-lived, so the run store re-reads the index's tail before minting and at lookup
-  (<doc:Design>, "The run store").
+- **M3 — the main profile:** 5 coarse tools for Haiku or Sonnet, a bundled prompt template, and a
+  plan-first path.
 
 ### Next
 
-- **M3 — the main profile:** 5 coarse tools for Haiku or Sonnet, a bundled prompt template, and a
-  plan-first path.
 - **M4 — evaluations:** delegation tasks run headless by Haiku and Sonnet, on `swe-2-max` vs
   `swe-2-high`; pass rates and a mode-routing table land here.
 - **M5 — ship (1.0.0):** Claude Code plugin, `.mcpb`, install and registration, beside the

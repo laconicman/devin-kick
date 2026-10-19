@@ -52,11 +52,12 @@ A field made optional encodes with `encodeIfPresent`, so it is omitted, never se
 
 ### One binary, two faces, three layers
 
-`DevinOpenAPI` (generated) → `DevinKickKit` (façade) → `kick` (argument parsing, and from M2 the
-MCP server). The façade never imports `ArgumentParser` or `MCP`, and the executable never talks
-HTTP. `InternalImportsByDefault` makes the layering a compiler rule: the Kit's public API uses its
-own types (``Principal``, ``Settlement``, ``KickError``), and a generated type can only leak
-through an explicit `public import`.
+`DevinOpenAPI` (generated) → `DevinKickKit` (façade) → `kick` (argument parsing). The MCP server
+is a library target between the last two, `KickMCP`, so its tests reach it; `kick serve` only
+builds the façade and runs it. The façade never imports `ArgumentParser` or `MCP`, and neither
+the executable nor `KickMCP` talks HTTP. `InternalImportsByDefault` makes the layering a compiler
+rule: the Kit's public API uses its own types (``Principal``, ``Settlement``, ``KickError``), and
+a generated type can only leak through an explicit `public import`.
 
 *Rejected:*
 - **Separate CLI and server binaries:** two artifacts to version and register, and drift between
@@ -176,14 +177,17 @@ Devin sessions run for minutes to hours, and Claude Code aborts an MCP call that
 300 s. So starting a session returns its id at once, the run is recorded at submit, and every
 wait is bounded per call (≤ 240 s) and simply called again. deepwiki-mcp TD-7 found this beats a
 progress heartbeat, which needs the client's `progressToken` and wasn't reliable; there is none
-here.
+here. The same TD-7 recorded a client that aborts at about 2 min (`-32001`), so `kick serve
+--max-wait` lowers the bound for one registration; no tool argument can raise it.
 
 `wait` polls 15 s, backing off by half to 60 s (deepwiki-mcp's `PollingPolicy` mechanics, not its
 constants), and races each GET against the remaining budget, so one hung request can't break the
 bound; deepwiki-mcp checked its deadline only between polls. A 429, a 5xx or no answer inside a
 wait is transient: the session is polled again, up to three polls in a row (deepwiki-mcp's
 `maxConsecutivePollFailures`), after which its error stands, so a failing endpoint can't keep a
-3 h `run` polling.
+3 h `run` polling. A cancelled wait stops polling: its sleeps are `try?`, so it used to poll on,
+each GET failing at once, and answer a cancelled MCP call. Only `wait` races its requests; every
+other call is as short as Devin's answers (<doc:TechDebt> TD-10).
 
 *Rejected:* a blocking "run and wait" MCP tool. The CLI's `kick run` may loop, because a shell
 has no idle limit: it polls the same way within `--budget` (default 3 h), saves, and archives the
@@ -191,9 +195,9 @@ sessions that are done.
 
 ### Approvals: bypassed by default, by a human's choice only
 
-`bypass_approval` is `true` by default. Only a person changes it, with the CLI flag or the
-environment at `serve` launch; no MCP tool exposes it. An approval wait that happens anyway is
-reported as input needed (owner's decision, 2026-10-18).
+`bypass_approval` is `true` by default. Only a person changes it, with `--no-bypass-approval` on
+`start` and `run`, or on `serve` in the server's registration; no MCP tool exposes it. An approval
+wait that happens anyway is reported as input needed (owner's decision, 2026-10-18).
 
 ### Retries by idempotency
 
@@ -261,10 +265,14 @@ places run directories elsewhere; the index stays central and records absolute p
   lost; derived files only warn, because `save` rewrites them, and recreates a deleted run
   directory (not `request.json`, the submit record).
 - The store and its run directories are `0700`: they hold prompts and attachments.
-- The index is read once per process, which suits the one-shot CLI. A long-lived process (M2's
-  server) doesn't see another process's appends, and two processes minting in the same second
-  can pick one run id (1 in 65,536 a pair; the duplicates rule then finds both sessions): M2
-  re-reads the index's tail before minting and at lookup.
+- The index is shared with every other `kick` process, and the MCP server lives for a whole
+  Claude Code session, so each read of the map first folds in the lines appended since the last
+  (`TailReader`): before minting a run id, at lookup, in `runs(tagged:)` and in the reconcile
+  sweep. Only complete lines are read, so a line still being written is read once its newline
+  lands; an index shorter than what was read was replaced, and is read again from its start. A
+  process's own appends are folded as written and read back later; an event folds to the same
+  record twice. Two processes minting in the same second can still pick one run id (1 in 65,536
+  a pair; the duplicates rule then finds both sessions).
 - An actor serializes writes in one process. Across processes each index line is one `write(2)`
   on an `O_APPEND` descriptor, with no locking: POSIX.1-2024 `write()` makes each write to a
   regular file atomic and allows no other modification between the seek to the end and the write.
@@ -275,10 +283,12 @@ places run directories elsewhere; the index stays central and records absolute p
   still says 30 days), and a sleeping non-resumable one at any age: live, a post to one answered
   400 "Cannot revive devin". `resumable` isn't in `SessionResponse`, so a session kick didn't
   create shows it as unknown.
-- `KICK_LOG_TSV`, when set, gets fstec's 9 columns for every run that settles (`run`, `save`): a
-  report of settled runs, since status and ACUs exist only then, unlike `UsageLog`'s line at
-  submit; the index is the record of every run. It lives in the executable and swallows its own
-  failures, as deepwiki-mcp's `UsageLog` does.
+- `KICK_LOG_TSV`, when set, gets fstec's 9 columns for every run that settles: a report of
+  settled runs, since status and ACUs exist only then, unlike `UsageLog`'s line at submit; the
+  index is the record of every run. ``DevinKick/save(_:)`` writes it, so `kick save`, `kick run`
+  and `kick_save` each log a settled run once. It is a derived file: a write that fails warns.
+  Until M2 it lived in the executable and swallowed its failures, as deepwiki-mcp's `UsageLog`
+  does, out of the server's reach.
 
 *Rejected:* locking the index (single short appends don't need it), a directory scan to find runs
 (deepwiki-mcp's `ConsultStore`), and swallowing the index write.
@@ -288,8 +298,12 @@ places run directories elsewhere; the index stays central and records absolute p
 Uploads are permanent, so `KICK_UPLOAD_ROOTS` (colon-separated) names the directories files may
 come from. A path is resolved with `realpath` (symlinks, `.`, `..`) and must lie inside a resolved
 root; unset means no uploads at all (78, naming the variable). `uploads.jsonl` maps sha256 + name
-to the URL Devin returned, so a second upload of the same file sends nothing. If Devin ever
-expires attachments, a cached URL fails at create with the server's own error; that is accepted.
+to the URL Devin returned, so a second upload of the same file sends nothing. Each lookup folds in
+what other processes appended, as the index does, and an upload in flight is shared: a second
+caller of the same content awaits the first's URL. The lookup, upload and record span a
+suspension, so without it two parallel `kick_upload` calls would both upload one file. If Devin
+ever expires attachments, a cached URL fails at create with the server's own error; that is
+accepted.
 
 ### Modes: one hard check, the rest warns
 
@@ -350,7 +364,93 @@ uuid, and a user's upload is listed with `source: user`.
 ### Operations ahead of the CLI
 
 The filter keeps 16 operations. The session-tag operations (get, append, replace) have no
-command in M1: create-time `--tag` covers the need, and the operations are there for M2's server.
+command or tool yet: create-time tags cover the need (`--tag` on the CLI, a session's `tags` in
+`kick_start`).
+
+### kick serve: the side profile
+
+`kick serve --profile side` is an MCP stdio server for a capable model that delegates bounded
+jobs to Devin, single or in batches, and checks the results itself (M2; the plan was approved by
+the owner on 2026-10-19). It runs on swift-sdk 0.12.1, pinned up to the next minor because the
+SDK is pre-1.0, and linked only into `KickMCP`.
+
+- **A registry, one boundary (amendment A17).** Each tool is a `ToolSpec`: its MCP definition,
+  and a handler from the tool's own `Decodable` input to its reply. A profile is an array, chosen
+  once from `--profile`, which accepts only `side` until M3. `Toolbox.call` is the one boundary:
+  look the tool up, decode, call, render, cap.
+- **One `isError` funnel.** A ``KickError`` renders as its message and the status the CLI would
+  exit with ("status 69: no answer, or 429 / 5xx: retry"), so a model reads the contract a shell
+  does. Nothing it says is thrown, which would turn advice into a protocol error. Two things are:
+  an unknown tool, a protocol error (-32602) by the MCP spec of 2025-11-25, and cancellation.
+- **Arguments are checked against the tool's own schema.** A name the schema doesn't list is
+  refused, since decoding would ignore a guessed `attachments` and start a session without its
+  files. A list is an array or one comma-separated string (deepwiki-mcp's `stringArray`). A
+  string the SDK read as a `data:` URL is refused (<doc:TechDebt> TD-9).
+- **Handlers run `@concurrent`.** The SDK starts each from its `Server` actor, so under
+  `NonisolatedNonsendingByDefault` their synchronous stretches would stall every other call. The
+  SDK runs each request in a task of its own, so a long `kick_wait` holds up no other call.
+
+The eight tools, all `kick_*` and disjoint from M3's five:
+
+| Tool | Does | Read-only / destructive / idempotent / open world |
+|---|---|---|
+| `kick_upload` | uploads files within `KICK_UPLOAD_ROOTS` | no / no / yes / yes |
+| `kick_start` | starts one session or a batch, and returns at once | no / no / no / yes |
+| `kick_status` | reads each session once | yes / no / yes / yes |
+| `kick_wait` | waits a bounded time, and is called again until the sessions settle | yes / no / yes / yes |
+| `kick_save` | writes session, result, messages and attachments into the run directory | no / no / yes / yes |
+| `kick_messages` | shows the latest messages' first lines | yes / no / yes / yes |
+| `kick_reply` | posts a message, then shows the session's status | no / no / no / yes |
+| `kick_archive` | archives; never terminates | no / no / yes / yes |
+
+Read-only means nothing changes on Devin's side. Status and wait may append bookkeeping events to
+the local index (`unfound`, a late duplicate), and two calls reconciling one run may both append
+them; the folds are idempotent, so the index stays right, only noisier.
+
+- **A batch is capped at 20 sessions** (owner, 2026-10-19). Approvals are bypassed by default and
+  no tool can turn that off, so one call must not fan out without a bound. Above the cap,
+  `kick_start` answers a usage error telling the model to split the batch, or to ask the operator
+  and call again with `confirmed_by_operator: true`, which Claude Code's permission prompt shows.
+  The CLI's manifests stay uncapped, since a person runs them. Every session is validated before
+  the first POST, as a manifest's are. The mode is the call's, then the session's, then
+  `KICK_MODE`, then `swe-2-max`.
+- **A prompt comes from a file or inline** (owner, 2026-10-19). An inline `prompt` is written into
+  the run directory as `prompt.md` before `request.json`, which names it, so a run started over
+  MCP is reproducible and byte-identical to its first message, as one from a file is. The
+  description gives each option's odds: a `prompt_file` is byte-identical by construction,
+  reusable, and costs no context; an inline prompt needs no file, but a model re-typing text that
+  already exists may mis-transcribe it.
+- **What no tool exposes, by a person's choice only:** `bypass_approval`, terminating a session
+  (`kick archive --terminate`; owner, 2026-10-19), the ACU limit and the store location.
+- **Results are compact and bounded** (CLAUDE.md rule 6). No result carries `structured_output` or
+  a transcript: `kick_save` lists each file with its size, and `result.json`'s top-level keys and
+  `kick_final`; `kick_messages` shows first lines, the last 10 by default, each cut at 160
+  characters. Every result passes one cap, 4 KB: whole lines are kept while they fit, then a note
+  says how many were left out and where the rest is. The next step is repeated in every result,
+  and the cap never cuts it.
+- **Waits stay under the client's limit.** `kick_wait` waits at most `--max-wait` (1 to 240 s,
+  240 by default); a longer `timeout` is a usage error saying to call again, which teaches the
+  bound where a clamp would hide it. A still-working session's line carries its latest message's
+  first line, fetched within 10 s, never the transcript (deepwiki-mcp's TD-10).
+- **A cancelled call gets no response.** The SDK sends none when the handler ends in
+  `CancellationError`. A start's POST and its recording finish in the shield (<doc:TechDebt>
+  TD-6), a cancelled batch starts nothing more, a cancelled wait stops polling, and the funnel
+  throws `CancellationError` before it renders.
+- **Configuration at launch.** `serve` reads the same environment as the CLI. Without
+  `DEVIN_API_KEY` it starts anyway, and every tool answers the configuration error (78), so the
+  model can tell the user what to set. stdout carries only the protocol; the Kit's warnings go to
+  stderr.
+- **The server is `devin-kick`, versioned as the package.** Its instructions say how the tools fit
+  together; each description repeats what its tool needs.
+
+*Rejected:*
+- **A separate `KickMCPTests` target.** It would need the Kit's scripted transport, and a test
+  target depending on another makes an unscoped `swift build -c release` compile the depended-on
+  tests without testability, so their `@testable import` fails (probed with SwiftPM 6.4,
+  2026-10-19). The server's tests live in `DevinKickKitTests/KickMCP/`.
+- **A profile checked per call:** a profile is fixed at launch, so `--profile` rejects anything
+  else at parsing (64).
+- **A progress heartbeat** (amendment A18): bounded calls and a returned handle are the design.
 
 ### A name distinct from the service
 

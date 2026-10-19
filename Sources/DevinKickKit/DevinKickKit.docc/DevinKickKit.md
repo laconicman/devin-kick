@@ -5,8 +5,8 @@ Devin (Cognition) as a side kick or a main kick, over Devin's official v3 REST A
 ## Overview
 
 `DevinKickKit` is the façade that the `kick` binary's two faces share: its CLI subcommands, and
-(from milestone M2) `kick serve`, an MCP stdio server. It turns Devin's session lifecycle into
-what a caller needs: start work, know where it stands, answer, collect the result.
+`kick serve`, an MCP stdio server. It turns Devin's session lifecycle into what a caller needs:
+start work, know where it stands, answer, collect the result.
 
 - **Side kick:** a capable model orchestrates and delegates bounded jobs, single or in batches,
   and verifies the results itself.

@@ -88,6 +88,7 @@ struct Toolbox: Sendable {
             throw MCPError.invalidParams("Unknown tool: \(params.name). This server's tools: \(specs.map(\.tool.name).joined(separator: ", ")).")
         }
         let reply: ToolReply
+        // TODO(TD-10): only kick_wait bounds its requests; a hung Devin can outlast the client here.
         do throws(KickError) {
             reply = try await spec.run(params.arguments ?? [:], try kick.get())
         } catch {
