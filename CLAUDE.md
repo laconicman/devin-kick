@@ -31,7 +31,7 @@ upcoming features on every handwritten target. Each choice is reasoned in `Desig
 3. **Settlement is the only reader of `status`/`status_detail`.** Unknown vocabulary is
    `.unknown`, shown raw, never guessed. Output is not proof of completion (TD-4, #2).
 4. **The spec changes only through `devin-spec-tool`.** Never hand-edit `openapi.yaml`. Re-vendor
-   with `swift run devin-spec-tool`, then confirm `--no-fetch` reports `0 / 0 / 0 / 0`, and put
+   with `swift run devin-spec-tool`, then confirm `--no-fetch` reports `0 / 0 / 0 / 0 / 0`, and put
    both counts in the PR body.
 5. **Zero warnings in handwritten targets.** The generated target's ~30 `UnusedImportAccess`
    warnings are TD-1 (#5), upstream, and can't be silenced. Under `NonisolatedNonsendingByDefault`,

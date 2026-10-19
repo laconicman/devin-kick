@@ -119,7 +119,7 @@ Nothing documents how soon a new session is listed. Duplicates are found and sho
 **Discharge:** Devin ships an idempotency key or a client-chosen session id on create, and kick
 sends it.
 
-### TD-8 — automation schemas never decode — *open (upstream)*
+### TD-8 — automation schemas never decode — *discharged*
 
 Tracked in [#10](https://github.com/laconicman/devin-kick/issues/10).
 
@@ -130,13 +130,15 @@ schemas it reaches `additionalProperties: false`. The generated decoder enforces
 byte-identical to the vendored one, so re-vendoring changes nothing. Sessions, messages,
 attachments and pages are open and unaffected.
 
-**Cost:** the warn-only `available_devin_modes` check can never read the list; every process that
-starts a session warns once.
+**Cost (until the fix):** the warn-only `available_devin_modes` check could never read the list;
+every process that started a session warned once.
 
-**Discharge** (owner, 2026-10-18): a second M1 pull request adds `devin-spec-tool`'s fourth
-transform, dropping `additionalProperties: false` from every response-reachable schema in
-transform 2's walk, and merges before tag 0.2.0. The feedback for Cognition is drafted in
-`Upstream/devin-closed-automation-schemas.md`.
+**Discharge:** done in M1's second pull request (owner, 2026-10-18). `devin-spec-tool`'s fourth
+transform drops `additionalProperties: false` from every response-reachable schema, in transform
+2's walk: 50 schemas, and a second run reports `0 / 0 / 0 / 0 / 0`. Live, the answer decodes and
+lists the modes (`LiveSmoke`). The feedback for Cognition is still drafted in
+`Upstream/devin-closed-automation-schemas.md`, unsent: a schema they close later would be opened
+on the next re-vendor anyway.
 
 ## See Also
 

@@ -17,7 +17,7 @@ connector laconicman/deepwiki-mcp, whose lessons are cited by its TechDebt ids.
 The client is generated at build time from Devin's **official** OpenAPI 3.1 document, vendored in
 `Sources/DevinOpenAPI/openapi.yaml` and filtered to the 16 operations the connector uses. Nothing
 generated is committed. The document is FastAPI's output and does not generate as published, so
-`swift run devin-spec-tool` normalizes it with three idempotent transforms:
+`swift run devin-spec-tool` normalizes it with four idempotent transforms:
 
 1. `anyOf: [X, {type: null}]` → `X` with `type: [T, "null"]`, 3.1's own spelling of nullable,
    which the generator reads as `T?`. `required` stays as the spec says. A nullable `$ref` has no
@@ -26,8 +26,14 @@ generated is committed. The document is FastAPI's output and does not generate a
    (<doc:TechDebt> TD-2, TD-3).
 2. `enum` is dropped from every schema reachable from a response, so a status, detail or mode
    Devin adds later can't fail decoding. The generator's string enums are closed, with no catch-all
-   case. Request-side enums stay.
+   case. Request-side enums stay, and a nullable enum keeps its `"null"` from transform 1.
 3. `handle_create_session_v3_…_post` → `create_session`, so the façade reads `createSession`.
+4. `additionalProperties: false` is dropped from every schema reachable from a response, in
+   transform 2's walk, so a field Devin adds later can't fail decoding either: the generator
+   enforces a closed object (`ensureNoAdditionalProperties`), and live the automation schemas
+   carried two fields the document doesn't list (<doc:TechDebt> TD-8). It opens 50 schemas. A
+   schema used only in requests stays closed; one shared with a response opens (33 of the 50),
+   which changes nothing for a request, since the generator emits no encoder check for it.
 
 The tool stamps the source URL, the raw document's sha256 and the date under `info.x-devin-kick`.
 A field made optional encodes with `encodeIfPresent`, so it is omitted, never sent as `null`.
@@ -292,7 +298,7 @@ then `KICK_MODE` (only a default), then `swe-2-max` (owner, 2026-10-18). The one
 request enum's 8 values (64, listing them). `available_devin_modes` is documented for
 automations, evaluated as the organization's automation identity, and optional, so a mode missing
 from it, an absent list or a refused GET warns once per process and the server decides. Live, the
-list can't be decoded at all (TD-8). A session that reports no `devin_mode` runs an agent preview
+list decodes since the fourth spec transform opened the response schemas (TD-8, discharged). A session that reports no `devin_mode` runs an agent preview
 and reads as "preview/other". A manifest mixing `swe-2-max` and `swe-2-high` created both, each
 reported with its own mode (live).
 

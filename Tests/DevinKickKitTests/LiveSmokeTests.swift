@@ -14,6 +14,13 @@ struct LiveSmokeTests {
         kick = DevinKick(configuration: try Configuration.fromEnvironment())
     }
 
+    /// TD-8: the live answer carries fields the published spec doesn't list; with the response
+    /// schemas opened (devin-spec-tool's transform 4) it decodes, and the modes are read.
+    @Test func automationSchemasDecodeAndListTheModes() async throws {
+        let modes = try #require(try await kick.availableModes())
+        #expect(modes.contains(DevinMode.standard.rawValue))
+    }
+
     @Test func selfAnswersWithAPrincipalType() async throws {
         let principal = try await kick.whoami()
         #expect(!principal.type.isEmpty)
