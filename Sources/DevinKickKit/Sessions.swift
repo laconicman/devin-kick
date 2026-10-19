@@ -135,6 +135,23 @@ extension DevinKick {
         return Reading(argument: argument, run: run, session: nil, verdict: nil, outcome: .settled(settlement))
     }
 
+    /// Where `arguments` stand, then every session on the server carrying `tag`: `kick status`
+    /// and `kick_status`. Runs whose create's answer was lost are first looked for by their run
+    /// tag. A tag no session carries is a usage error when nothing else was named.
+    public func status(_ arguments: [String], tag: String? = nil) async throws(KickError) -> [Reading] {
+        await reconcileOrphans()
+        var readings: [Reading] = []
+        for argument in arguments {
+            readings.append(await observe(argument))
+        }
+        if let tag {
+            let tagged = try await observe(tagged: tag)
+            guard !tagged.isEmpty || !readings.isEmpty else { throw .usage("No session carries the tag \(tag).") }
+            readings += tagged
+        }
+        return readings
+    }
+
     /// Every session carrying `tag` on the server, read from one listing.
     public func observe(tagged tag: String) async throws(KickError) -> [Reading] {
         var readings: [Reading] = []

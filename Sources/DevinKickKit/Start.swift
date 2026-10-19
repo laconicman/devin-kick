@@ -59,11 +59,25 @@ public struct SessionRequest: Sendable, Hashable {
     public var outDirectory: URL?
 }
 
+extension SessionRequest {
+    /// How a failure names the request: its title, or its prompt file.
+    public var name: String { title ?? promptFile?.lastPathComponent ?? "an inline prompt" }
+}
+
 /// A session kick started and recorded.
 public struct StartedRun: Sendable, Hashable {
     public var run: RunState
     public var sessionID: String
     public var url: String
+
+    /// `run id  session id  URL  directory`, and any duplicate found under the run's tag.
+    public var line: String {
+        var line = "\(run.runID)  \(sessionID)  \(url)  \(run.directory.path)"
+        if !run.duplicates.isEmpty {
+            line += "\n  also under this run's tag: \(run.duplicates.joined(separator: ", "))"
+        }
+        return line
+    }
 }
 
 extension DevinKick {

@@ -35,11 +35,7 @@ struct ToolboxTests {
     }
 
     static func call(_ toolbox: Toolbox, _ arguments: [String: Value]) async throws -> (text: String, isError: Bool) {
-        let result = try await toolbox.call(.init(name: "kick_echo", arguments: arguments))
-        let text = result.content.map { content in
-            if case .text(let text, _, _) = content { text } else { "" }
-        }.joined()
-        return (text, result.isError == true)
+        try await toolbox.reply("kick_echo", arguments)
     }
 
     /// An unknown tool is a protocol error, as the MCP spec (2025-11-25) has it: -32602.

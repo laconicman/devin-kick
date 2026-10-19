@@ -27,18 +27,7 @@ struct StatusCommand: AsyncParsableCommand {
 
     func run() async throws {
         try await exitingWithStatus { () async throws(KickError) -> Int32 in
-            let kick = try DevinKick.fromEnvironment()
-            await kick.reconcileOrphans()
-            var readings: [Reading] = []
-            for id in ids {
-                readings.append(await kick.observe(id))
-            }
-            if let tag {
-                let tagged = try await kick.observe(tagged: tag)
-                guard !tagged.isEmpty || !readings.isEmpty else { throw .usage("No session carries the tag \(tag).") }
-                readings += tagged
-            }
-            return printed(readings)
+            printed(try await DevinKick.fromEnvironment().status(ids, tag: tag))
         }
     }
 }

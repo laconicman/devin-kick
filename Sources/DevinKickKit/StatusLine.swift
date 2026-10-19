@@ -127,14 +127,20 @@ extension Reading {
     /// explicit, because the codes' numeric order (75 above 11) isn't it. A reading that
     /// couldn't be read exits with its error's status when alone, and ranks as unknown in a batch.
     public static func exitCode(_ readings: [Reading]) -> Int32 {
-        if readings.count == 1, case .unreadable(let error) = readings[0].outcome { return error.exitCode }
+        overall(readings).exitCode
+    }
+
+    /// A batch's state, as ``exitCode(_:)`` ranks it: the worst reading's label and exit status;
+    /// `error` and the error's status for a lone reading that couldn't be read.
+    public static func overall(_ readings: [Reading]) -> (label: String, exitCode: Int32) {
+        if readings.count == 1, case .unreadable(let error) = readings[0].outcome { return ("error", error.exitCode) }
         let worst = readings.map { reading -> Settlement in
             switch reading.outcome {
             case .settled(let settlement): settlement
             case .unreadable: .unknown(status: "unreadable", detail: nil)
             }
-        }.max { $0.severity < $1.severity }
-        return worst?.exitCode ?? Settlement.done(detail: nil).exitCode
+        }.max { $0.severity < $1.severity } ?? .done(detail: nil)
+        return (worst.label, worst.exitCode)
     }
 }
 

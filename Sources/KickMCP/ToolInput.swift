@@ -91,6 +91,11 @@ enum InputSchema {
         ["type": "string", "description": .string(description)]
     }
 
+    /// An array of `items`, at least one.
+    static func array(of items: Value, _ description: String) -> Value {
+        ["type": "array", "items": items, "minItems": 1, "description": .string(description)]
+    }
+
     /// A ``StringList``: declared as an array, which is what models should send.
     static func list(_ description: String) -> Value {
         ["type": "array", "items": ["type": "string"], "description": .string(description)]
