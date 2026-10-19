@@ -83,11 +83,12 @@ let package = Package(
             ],
             swiftSettings: upcoming
         ),
-        // The `kick` binary: CLI subcommands (and, from M2, `serve`).
+        // The `kick` binary: CLI subcommands, and `serve`.
         .executableTarget(
             name: "kick",
             dependencies: [
                 "DevinKickKit",
+                "KickMCP",
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             swiftSettings: upcoming

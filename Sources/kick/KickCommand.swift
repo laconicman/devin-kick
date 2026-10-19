@@ -2,8 +2,8 @@ import ArgumentParser
 import DevinKickKit
 import Foundation
 
-/// `kick` — one binary, both faces: CLI subcommands for people and scripts, and (from M2)
-/// `kick serve` as an MCP stdio server for agents, both over the same ``DevinKick`` façade.
+/// `kick` — one binary, both faces: CLI subcommands for people and scripts, and `kick serve` as
+/// an MCP stdio server for agents, both over the same ``DevinKick`` façade.
 @main
 struct KickCommand: AsyncParsableCommand {
     static let configuration = CommandConfiguration(
@@ -20,7 +20,7 @@ struct KickCommand: AsyncParsableCommand {
         subcommands: [
             WhoAmI.self, UploadCommand.self, StartCommand.self, StatusCommand.self, WaitCommand.self,
             MessagesCommand.self, SaveCommand.self, ReplyCommand.self, ArchiveCommand.self, UnarchiveCommand.self,
-            ListCommand.self, RunCommand.self,
+            ListCommand.self, RunCommand.self, ServeCommand.self,
         ]
     )
 }
