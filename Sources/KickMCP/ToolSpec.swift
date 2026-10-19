@@ -83,7 +83,11 @@ struct Toolbox: Sendable {
     /// advice for the model, which a thrown error would turn into a protocol error. Two things
     /// are thrown: an unknown tool, a protocol error by the MCP spec (2025-11-25, "Error
     /// Handling"), and cancellation, so the SDK sends no response at all (plan decision 9).
-    func call(_ params: CallTool.Parameters) async throws -> CallTool.Result {
+    ///
+    /// `@concurrent`, so the lookup, the decoding and the cap run off the SDK's `Server` actor
+    /// too: the closure registered with the SDK is ours, so under `NonisolatedNonsendingByDefault`
+    /// it may start on that actor (DeepWiki on swift-sdk, 2026-10-19).
+    @concurrent func call(_ params: CallTool.Parameters) async throws -> CallTool.Result {
         guard let spec = specs.first(where: { $0.tool.name == params.name }) else {
             throw MCPError.invalidParams("Unknown tool: \(params.name). This server's tools: \(specs.map(\.tool.name).joined(separator: ", ")).")
         }
